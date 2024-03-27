@@ -1,6 +1,5 @@
 void setup() {
-  // put your setup code here, to run once:
-  #define SENSOR8 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0)
+  #define SENSOR8 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0) //Sets up each 
   #define SENSOR7 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(1<<MUX0)
   #define SENSOR6 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(1<<MUX1)|(0<<MUX0)
   #define SENSOR5 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(1<<MUX1)|(1<<MUX0)
@@ -68,8 +67,8 @@ void loop() {
   setupADC();
 	///sensorOutput[] tests (//higher when over black(low reflectance) //smaller when over white(high reflectance))
 	//From 0.5 cm above line
-	//Anything smaller than 30-40 is white (high reflectance)
-	//Anything above 30-40 is grey to black (low reflectance)
+	//Anything smaller than 30-40 is white (Untested)
+	//Anything above 30-40 is grey to black (Untested)
 		
 	while(1)
 	{
