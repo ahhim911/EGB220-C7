@@ -1,12 +1,17 @@
+
+const char MUXMASK = 0b00011111;
+const char MUXMASK_MUX5 = 0b00100000;
+
 void setup() {
-  #define SENSOR8 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0) //Sets up each 
+  #define SENSOR8 (1<<MUX5)|(0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0) //Sets up each 
   #define SENSOR7 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(1<<MUX0)
-  #define SENSOR6 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(1<<MUX1)|(0<<MUX0)
+  #define SENSOR6 (1<<MUX5)|(0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(1<<MUX1)|(0<<MUX0)
   #define SENSOR5 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(1<<MUX1)|(1<<MUX0)
   #define SENSOR4 (0<<MUX4)|(0<<MUX3)|(1<<MUX2)|(1<<MUX1)|(1<<MUX0)
   #define SENSOR3 (0<<MUX4)|(0<<MUX3)|(1<<MUX2)|(1<<MUX1)|(0<<MUX0)
   #define SENSOR2 (0<<MUX4)|(0<<MUX3)|(1<<MUX2)|(0<<MUX1)|(1<<MUX0)
   #define SENSOR1 (0<<MUX4)|(0<<MUX3)|(1<<MUX2)|(0<<MUX1)|(0<<MUX0)
+
 
 }
 uint8_t sensorOutput[8]; //ADC sensor value array
@@ -32,6 +37,8 @@ void setupMotors()
 }
 void setupADC()
 {
+  //DDRD = (0<<5) | (0<<8);
+  //DDRF = (0<<5) | (0<<6);
 	//Using internal 2.56V reference, left adjusted
 	ADMUX |= (1<<REFS1)|(1<<REFS0)|(1<<ADLAR); 
 	//Enabling ADC, 128 prescaler, no auto-triggering (1<<ADATE to auto trigger) (1<<ADIE for conversion complete interrupt enable)
@@ -46,13 +53,15 @@ void getSensorReading()
 	for (sens_num = 0; sens_num < 4; sens_num++)
 	{
 		//Clearing current ADC
-		ADMUX |= (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0);
+		// ADMUX |= (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0);
+    ADMUX = (ADMUX & ~MUXMASK);
+    ADCSRB = (ADCSRB & ~MUXMASK_MUX5);
 		
 		//Cycling through each sensor
-		if (sens_num == 0) {ADMUX |= SENSOR1; ADCSRB |= (0<<MUX5);}//Does not work for sensors that require MUX5 set high (some problem with clearing this bit..?)
-		if (sens_num == 1) {ADMUX |= SENSOR2; ADCSRB |= (0<<MUX5);}
-		if (sens_num == 2) {ADMUX |= SENSOR3; ADCSRB |= (0<<MUX5);}
-		if (sens_num == 3) {ADMUX |= SENSOR4; ADCSRB |= (0<<MUX5);}
+		if (sens_num == 0) {ADMUX |= SENSOR2; ADCSRB |= SENSOR2;}//Does not work for sensors that require MUX5 set high (some problem with clearing this bit..?)
+		if (sens_num == 1) {ADMUX |= SENSOR4; ADCSRB |= SENSOR4;}
+		if (sens_num == 2) {ADMUX |= SENSOR6; ADCSRB |= SENSOR6;}
+		if (sens_num == 3) {ADMUX |= SENSOR8; ADCSRB |= SENSOR8;}
 		
 		//Starting conversion
 		ADCSRA |= (1<<ADSC);
@@ -74,14 +83,55 @@ void loop() {
 	{
 		getSensorReading();
 		//Testing 
-		if (sensorOutput[2] < 30)//30 value here needs to be calibrated with actual robot conditions
+    Serial.print("S1  S2  S3  S4  \n");
+    //Active mode
+    int sersor_0 = sensorOutput[0];
+    int sersor_1 = sensorOutput[1];
+    int sersor_2 = sensorOutput[2];
+    int sersor_3 = sensorOutput[3];
+    Serial.print(sersor_0); Serial.print(" ");
+    Serial.print(sersor_1); Serial.print(" ");
+    Serial.print(sersor_2); Serial.print(" ");
+    Serial.print(sersor_3); Serial.println();
+
+    // Switch mode
+    /*
+		if (sensorOutput[0] < 30)//30 value here needs to be calibrated with actual robot conditions
 		{
-			Serial.print("f");//Do something when high reflectance
+			Serial.print("f ");//Do something when high reflectance
 		}
 		else
 		{
-      Serial.print("l");
+      Serial.print("l ");
 			//Do something else when low reflectance
 		}
+		if (sensorOutput[1] < 30)//30 value here needs to be calibrated with actual robot conditions
+		{
+			Serial.print("f ");//Do something when high reflectance
+		}
+		else
+		{
+      Serial.print("l ");
+			//Do something else when low reflectance
+		}
+		if (sensorOutput[2] < 30)//30 value here needs to be calibrated with actual robot conditions
+		{
+			Serial.print("f ");//Do something when high reflectance
+		}
+		else
+		{
+      Serial.print("l ");
+			//Do something else when low reflectance
+		}
+		if (sensorOutput[3] < 30)//30 value here needs to be calibrated with actual robot conditions
+		{
+			Serial.print("f \n");//Do something when high reflectance
+		}
+		else
+		{
+      Serial.print("l \n");
+			//Do something else when low reflectance
+		}
+    */
 }
 }
