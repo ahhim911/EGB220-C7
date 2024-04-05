@@ -19,6 +19,11 @@ void setup() {
 
 }
 uint8_t sensorOutput[8]; //ADC sensor value array
+void setupButton()
+{
+  DDRC &= ~((1<<PC6) | (1<<PC7));
+  PORTB &= ~((1<<PC6) | (1<<PC7));
+}
 void setupMotors()
 {
   DDRB |= (1<<PB7);
@@ -60,10 +65,10 @@ void getSensorReading()
     ADCSRB = (ADCSRB & ~MUXMASK_MUX5);
 		
 		//Cycling through each sensor
-		if (sens_num == 0) {ADMUX |= SENSOR1; ADCSRB |= SENSOR1;}//Does not work for sensors that require MUX5 set high (some problem with clearing this bit..?)
-		if (sens_num == 1) {ADMUX |= SENSOR2; ADCSRB |= SENSOR2;}
-		if (sens_num == 2) {ADMUX |= SENSOR3; ADCSRB |= SENSOR3;}
-		if (sens_num == 3) {ADMUX |= SENSOR4; ADCSRB |= SENSOR4;}
+		if (sens_num == 0) {ADMUX |= SENSOR2; ADCSRB |= SENSOR2;}//Does not work for sensors that require MUX5 set high (some problem with clearing this bit..?)
+		if (sens_num == 1) {ADMUX |= SENSOR4; ADCSRB |= SENSOR4;}
+		if (sens_num == 2) {ADMUX |= SENSOR6; ADCSRB |= SENSOR6;}
+		if (sens_num == 3) {ADMUX |= SENSOR8; ADCSRB |= SENSOR8;}
 		
 		//Starting conversion
 		ADCSRA |= (1<<ADSC);
@@ -77,6 +82,7 @@ void loop() {
   // put your main code here, to run repeatedly:
   setupADC();
   setupMotors();
+  setupButton();
 	///sensorOutput[] tests (//higher when over black(low reflectance) //smaller when over white(high reflectance))
 	//From 0.5 cm above line
 	//Anything smaller than 30-40 is white (Untested)
@@ -85,77 +91,84 @@ void loop() {
   const int baseSpeed = 70; // Base speed for both motors
   int error = 0; // Difference in reflectance readings between left and right sensors
   float ts = 50.0; // Modify ts to adjust turning sharpness
-		
+
+  int testMode = 0;	
+  int mode = 0;	// mode 0 is line following mode ; mode 1 is move forward
+  
 	while(1)
 	{
 		getSensorReading();
-		//Testing 
-    Serial.print("S1  S2  S3  S4  \n");
-    //Active mode
-    
-    int sersor_0 = (sensorOutput[0] - 0);
-    int sersor_1 = (sensorOutput[1] - 0);
-    int sersor_2 = (sensorOutput[2] - 0);
-    int sersor_3 = (sensorOutput[3] - 0);
-    Serial.print(sersor_3); Serial.print(" ");
-    Serial.print(sersor_2); Serial.print(" ");
-    Serial.print(sersor_1); Serial.print(" ");
-    Serial.print(sersor_0); Serial.print(" ");
-    
-    // Switch mode
-		if (sensorOutput[0] < sensitivity)//30 value here needs to be calibrated with actual robot conditions
-		{
-			PORTB |= (1<<2); // Turn on LED3
-		}
-		else
-		{
-			PORTB &= ~(1<<2); // Turn off LED3
-			//Do something else when low reflectance
-		}
-		if (sensorOutput[1] < sensitivity)//30 value here needs to be calibrated with actual robot conditions
-		{
-			PORTB |= (1<<1); // Turn on LED2
-		}
-		else
-		{
-			PORTB &= ~(1<<1); // Turn off LED2
-			//Do something else when low reflectance
-		}
-		if (sensorOutput[2] < sensitivity)//30 value here needs to be calibrated with actual robot conditions
-		{
-			//PORTB |= (1<<0); // Turn on LED1
-		}
-		else
-		{
-			//PORTB &= ~(1<<0); // Turn off LED1
-			//Do something else when low reflectance
-		}
-		if (sensorOutput[3] < sensitivity)//30 value here needs to be calibrated with actual robot conditions
-		{
-			//PORTE |= (1<<6); // Turn on LED0
-		}
-		else
-		{
-			//PORTE &= ~(1<<6); // Turn off LED0
-			//Do something else when low reflectance
-		}
+		if ( PINC & (1<<PC7) )
+    {
+      mode = 1; //move forward
+      OCR0A = 100;
+      OCR0B = 100;
+    } else if  ( PINC & (1<<PC6) ){
+      mode = 0;
+    }
+    if ( mode == 1)
+    {
+      PORTB |= (1<<2); // Turn on LED3
+      PORTB &= ~(1<<1); // Turn off LED2
+    } else if ( mode == 0 ) {
+      PORTB |= (1<<1); // Turn on LED2
+      PORTB &= ~(1<<2); // Turn off LED3
+      //Testing 
+      if ( testMode == 1 )
+      {
+        Serial.print("S1  S2  S3  S4  \n");
+        //Active mode
 
-    int leftSensorAverage = (sensorOutput[0] * 5 + sensorOutput[1]) / 6;
-    int rightSensorAverage = (sensorOutput[2] + sensorOutput[3] * 5) / 6;
-    // Calculate ratio
-    float leftRatio = leftSensorAverage / rightSensorAverage;
-    float rightRatio = rightSensorAverage / leftSensorAverage;
+        int sersor_0 = (sensorOutput[0] - 0);
+        int sersor_1 = (sensorOutput[1] - 0);
+        int sersor_2 = (sensorOutput[2] - 0);
+        int sersor_3 = (sensorOutput[3] - 0);
+        Serial.print(sersor_3); Serial.print(" ");
+        Serial.print(sersor_2); Serial.print(" ");
+        Serial.print(sersor_1); Serial.print(" ");
+        Serial.print(sersor_0); Serial.print(" ");
+        Serial.println();
+      }
+
+      // Switch mode
+      /*
+      if (sensorOutput[0] < sensitivity)//30 value here needs to be calibrated with actual robot conditions
+      {
+        PORTB |= (1<<2); // Turn on LED3
+      }
+      else
+      {
+        PORTB &= ~(1<<2); // Turn off LED3
+        //Do something else when low reflectance
+      }
+      if (sensorOutput[1] < sensitivity)//30 value here needs to be calibrated with actual robot conditions
+      {
+        PORTB |= (1<<1); // Turn on LED2
+      }
+      else
+      {
+        PORTB &= ~(1<<1); // Turn off LED2
+        //Do something else when low reflectance
+      }
+      */
+      int leftSensorAverage = (sensorOutput[0] * 5 + sensorOutput[1]) / 6;
+      int rightSensorAverage = (sensorOutput[2] + sensorOutput[3] * 5) / 6;
+      // Calculate ratio
+      float leftRatio = leftSensorAverage / rightSensorAverage;
+      float rightRatio = rightSensorAverage / leftSensorAverage;
 
 
-    int leftMotorSpeed = baseSpeed - (leftRatio * ts);
-    int rightMotorSpeed = baseSpeed - (rightRatio * ts);
-    leftMotorSpeed = constrain(leftMotorSpeed, 0, 255);
-    rightMotorSpeed = constrain(rightMotorSpeed, 0, 255);
-    
-    //Serial.print("left:"); Serial.print(leftMotorSpeed);
-    //Serial.print("  right:"); Serial.print(rightMotorSpeed); Serial.println();
-    
-	  OCR0A = leftMotorSpeed; //left motor
-	  OCR0B = rightMotorSpeed; //right motor
+      int leftMotorSpeed = baseSpeed - (leftRatio * ts);
+      int rightMotorSpeed = baseSpeed - (rightRatio * ts);
+      leftMotorSpeed = constrain(leftMotorSpeed, 0, 255);
+      rightMotorSpeed = constrain(rightMotorSpeed, 0, 255);
+      
+      //Serial.print("left:"); Serial.print(leftMotorSpeed);
+      //Serial.print("  right:"); Serial.print(rightMotorSpeed); Serial.println();
+      
+      OCR0A = leftMotorSpeed; //left motor
+      OCR0B = rightMotorSpeed; //right motor
+      
+    }
 } 
 }
