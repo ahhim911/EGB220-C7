@@ -119,14 +119,14 @@ void loop() {
         Serial.print("S1  S2  S3  S4  \n");
         //Active mode
 
-        int sersor_0 = (sensorOutput[0] - 0);
-        int sersor_1 = (sensorOutput[1] - 0);
-        int sersor_2 = (sensorOutput[2] - 0);
-        int sersor_3 = (sensorOutput[3] - 0);
-        Serial.print(sersor_3); Serial.print(" ");
-        Serial.print(sersor_2); Serial.print(" ");
-        Serial.print(sersor_1); Serial.print(" ");
-        Serial.print(sersor_0); Serial.print(" ");
+        int sensor_0 = (sensorOutput[0] - 0);
+        int sensor_1 = (sensorOutput[1] - 0);
+        int sensor_2 = (sensorOutput[2] - 0);
+        int sensor_3 = (sensorOutput[3] - 0);
+        Serial.print(sensor_3); Serial.print(" ");
+        Serial.print(sensor_2); Serial.print(" ");
+        Serial.print(sensor_1); Serial.print(" ");
+        Serial.print(sensor_0); Serial.print(" ");
         Serial.println();
       }
 
