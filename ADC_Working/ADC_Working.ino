@@ -65,10 +65,10 @@ void getSensorReading()
     ADCSRB = (ADCSRB & ~MUXMASK_MUX5);
 		
 		//Cycling through each sensor
-		if (sens_num == 0) {ADMUX |= SENSOR2; ADCSRB |= SENSOR2;}//Does not work for sensors that require MUX5 set high (some problem with clearing this bit..?)
-		if (sens_num == 1) {ADMUX |= SENSOR4; ADCSRB |= SENSOR4;}
-		if (sens_num == 2) {ADMUX |= SENSOR6; ADCSRB |= SENSOR6;}
-		if (sens_num == 3) {ADMUX |= SENSOR8; ADCSRB |= SENSOR8;}
+		if (sens_num == 0) {ADMUX |= SENSOR1; ADCSRB |= SENSOR1;}//Does not work for sensors that require MUX5 set high (some problem with clearing this bit..?)
+		if (sens_num == 1) {ADMUX |= SENSOR2; ADCSRB |= SENSOR2;}
+		if (sens_num == 2) {ADMUX |= SENSOR3; ADCSRB |= SENSOR3;}
+		if (sens_num == 3) {ADMUX |= SENSOR4; ADCSRB |= SENSOR4;}
 		
 		//Starting conversion
 		ADCSRA |= (1<<ADSC);
@@ -88,11 +88,12 @@ void loop() {
 	//Anything smaller than 30-40 is white (Untested)
 	//Anything above 30-40 is grey to black (Untested)
   int sensitivity = 100;
-  const int baseSpeed = 70; // Base speed for both motors
+  const int baseSpeed = 60; // Base speed for both motors
+  const int maxSpeed = 100; // Maximum speed
   int error = 0; // Difference in reflectance readings between left and right sensors
-  float ts = 50.0; // Modify ts to adjust turning sharpness
+  float ts = 80.0; // Modify ts to adjust turning sharpness
 
-  int testMode = 0;	
+  int testMode = 1;	// Set test mode to print the sensor reading on Serial Monitor
   int mode = 0;	// mode 0 is line following mode ; mode 1 is move forward
   
 	while(1)
@@ -129,34 +130,28 @@ void loop() {
         Serial.print(sensor_0); Serial.print(" ");
         Serial.println();
       }
+      //P Control 0
+      float position = (sensorOutput[0] * -2) + (sensorOutput[1] * -0.9) + (sensorOutput[2] * 0.9) + (sensorOutput[3] * 2);
+      Serial.print(position);
+      Serial.println();
+      int controlSignal = (int)(position * 0.1); // Proportional gain of 1.0, adjust as needed
+    
+      // Adjust motor speeds based on control signal
+      int leftMotorSpeed = baseSpeed + controlSignal;
+      int rightMotorSpeed = baseSpeed - controlSignal;
 
-      // Switch mode
+      // Constrain speeds to allowable range
+      leftMotorSpeed = constrain(leftMotorSpeed, 0, maxSpeed);
+      rightMotorSpeed = constrain(rightMotorSpeed, 0, maxSpeed);
+    
+
       /*
-      if (sensorOutput[0] < sensitivity)//30 value here needs to be calibrated with actual robot conditions
-      {
-        PORTB |= (1<<2); // Turn on LED3
-      }
-      else
-      {
-        PORTB &= ~(1<<2); // Turn off LED3
-        //Do something else when low reflectance
-      }
-      if (sensorOutput[1] < sensitivity)//30 value here needs to be calibrated with actual robot conditions
-      {
-        PORTB |= (1<<1); // Turn on LED2
-      }
-      else
-      {
-        PORTB &= ~(1<<1); // Turn off LED2
-        //Do something else when low reflectance
-      }
-      */
+      // P Control 1
       int leftSensorAverage = (sensorOutput[0] * 5 + sensorOutput[1]) / 6;
       int rightSensorAverage = (sensorOutput[2] + sensorOutput[3] * 5) / 6;
       // Calculate ratio
       float leftRatio = leftSensorAverage / rightSensorAverage;
       float rightRatio = rightSensorAverage / leftSensorAverage;
-
 
       int leftMotorSpeed = baseSpeed - (leftRatio * ts);
       int rightMotorSpeed = baseSpeed - (rightRatio * ts);
@@ -165,10 +160,12 @@ void loop() {
       
       //Serial.print("left:"); Serial.print(leftMotorSpeed);
       //Serial.print("  right:"); Serial.print(rightMotorSpeed); Serial.println();
-      
+      */
+
       OCR0A = leftMotorSpeed; //left motor
       OCR0B = rightMotorSpeed; //right motor
       
+      delay(10);
     }
 } 
 }
