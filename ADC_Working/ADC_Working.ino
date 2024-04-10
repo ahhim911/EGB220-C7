@@ -22,7 +22,7 @@ uint8_t sensorOutput[8]; //ADC sensor value array
 void setupButton()
 {
   DDRC &= ~((1<<PC6) | (1<<PC7));
-  PORTB &= ~((1<<PC6) | (1<<PC7));
+  PORTC &= ~((1<<PC6) | (1<<PC7));
 }
 void setupMotors()
 {
@@ -30,10 +30,10 @@ void setupMotors()
   DDRD |= (1<<PD0);
   
 	//Timer 1 settings (8-bit fast pwm, ignore on compare match, clear at top, 256 prescaler)
-	TCCR1A |= (1<<WGM10)|(1<<COM1A1)|(1<<COM1B1);
-	TCCR1B |= (1<<WGM12)|(1<<CS12); 
+	//TCCR1A |= (1<<WGM10)|(1<<COM1A1)|(1<<COM1B1);
+	//TCCR1B |= (1<<WGM12)|(1<<CS12); 
 	//Timer 1 interrupt enable
-	TIMSK1 |= (1<<0);
+	//TIMSK1 |= (1<<0);
 	//Timer 0 settings (8-bit fast pwm, ignore on compare match, clear at top, 256 prescaler) 
   
   TCCR0A = (1<<COM0A1) | (0<<COM0A0) | (1<<COM0B1) | (0<<COM0B0) | (1<<WGM01) | (1<<WGM00);
