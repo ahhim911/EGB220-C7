@@ -1,3 +1,11 @@
+#define SENSOR8 (1<<MUX5)|(0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0) //Sets up each 
+#define SENSOR7 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(1<<MUX0)
+#define SENSOR6 (1<<MUX5)|(0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(1<<MUX1)|(0<<MUX0)
+#define SENSOR5 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(1<<MUX1)|(1<<MUX0)
+#define SENSOR4 (0<<MUX4)|(0<<MUX3)|(1<<MUX2)|(1<<MUX1)|(1<<MUX0)
+#define SENSOR3 (0<<MUX4)|(0<<MUX3)|(1<<MUX2)|(1<<MUX1)|(0<<MUX0)
+#define SENSOR2 (0<<MUX4)|(0<<MUX3)|(1<<MUX2)|(0<<MUX1)|(1<<MUX0)
+#define SENSOR1 (0<<MUX4)|(0<<MUX3)|(1<<MUX2)|(0<<MUX1)|(0<<MUX0)
 
 const char MUXMASK = 0b00011111;
 const char MUXMASK_MUX5 = 0b00100000;
@@ -7,7 +15,7 @@ const char MUXMASK_MUX5 = 0b00100000;
 //Anything smaller than 30-40 is white (Untested)
 //Anything above 30-40 is grey to black (Untested)
 int sensitivity = 100;
-const int baseSpeed = 60; // Base speed for both motors
+const int baseSpeed = 40; // Base speed for both motors
 const int maxSpeed = 100; // Maximum speed
 int error = 0; // Difference in reflectance readings between left and right sensors
 float ts = 80.0; // Modify ts to adjust turning sharpness
@@ -46,7 +54,7 @@ void setupMotors()
 void setupADC()
 {
 	//Using internal 2.56V reference, left adjusted
-	ADMUX |= (0<<REFS1)|(1<<REFS0)|(1<<ADLAR); 
+	ADMUX |= (1<<REFS1)|(1<<REFS0)|(1<<ADLAR); 
 	//Enabling ADC, 128 prescaler, no auto-triggering (1<<ADATE to auto trigger) (1<<ADIE for conversion complete interrupt enable)
 	ADCSRA |= (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
 	//Free running mode
@@ -79,14 +87,6 @@ void getSensorReading()
 }
 
 void setup() {
-  #define SENSOR8 (1<<MUX5)|(0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0) //Sets up each 
-  #define SENSOR7 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(1<<MUX0)
-  #define SENSOR6 (1<<MUX5)|(0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(1<<MUX1)|(0<<MUX0)
-  #define SENSOR5 (0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(1<<MUX1)|(1<<MUX0)
-  #define SENSOR4 (0<<MUX4)|(0<<MUX3)|(1<<MUX2)|(1<<MUX1)|(1<<MUX0)
-  #define SENSOR3 (0<<MUX4)|(0<<MUX3)|(1<<MUX2)|(1<<MUX1)|(0<<MUX0)
-  #define SENSOR2 (0<<MUX4)|(0<<MUX3)|(1<<MUX2)|(0<<MUX1)|(1<<MUX0)
-  #define SENSOR1 (0<<MUX4)|(0<<MUX3)|(1<<MUX2)|(0<<MUX1)|(0<<MUX0)
 
   //Set Output Direction for the LED 0,1,2,3
   DDRE |= (1<<PE6);
@@ -106,17 +106,28 @@ void loop() {
   getSensorReading();
   if ( PINC & (1<<PC7) )
   {
-    mode = 1; //move forward
+    PORTB |= (1<<2); // Turn on LED3
+    PORTB &= ~(1<<1); // Turn off LED2
     OCR0A = 80;
     OCR0B = 80;
+    delay(500);
+    OCR0A = 0;
+    OCR0B = 0;
+    mode = 2;
   } else if  ( PINC & (1<<PC6) ){
     mode = 0;
   }
-  if ( mode == 1)
+  if ( mode == 2 ){
+      OCR0A = 0;
+      OCR0B = 0;
+      PORTB |= (1<<2); // Turn on LED3
+      PORTB |= (1<<1); // Turn on LED2
+      if((sensorOutput[0] <= 230) && (sensorOutput[1] <= 230) && (sensorOutput[2] <= 230) && (sensorOutput[3] <= 230)){
+      mode = 0; // line following
+      }
+  } else if ( mode == 1) // line following
   {
-    PORTB |= (1<<2); // Turn on LED3
-    PORTB &= ~(1<<1); // Turn off LED2
-  } else if ( mode == 0 ) {
+  } else if ( mode == 0 ) { // line following
     PORTB |= (1<<1); // Turn on LED2
     PORTB &= ~(1<<2); // Turn off LED3
 
@@ -163,7 +174,9 @@ void loop() {
       // Stops the motors when the robot detects black
       OCR0A = 0;
       OCR0B = 0;
-      delay(500);
+      PORTB |= (1<<2); // Turn on LED3
+      PORTB |= (1<<1); // Turn on LED2
+      mode = 2; // error mode
       }
     //Testing 
     if ( testMode == 1 )
