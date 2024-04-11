@@ -15,10 +15,10 @@ const char MUXMASK_MUX5 = 0b00100000;
 //Anything smaller than 30-40 is white (Untested)
 //Anything above 30-40 is grey to black (Untested)
 int sensitivity = 100;
-const int baseSpeed = 40; // Base speed for both motors
+const int baseSpeed = 60; // Base speed for both motors
 const int maxSpeed = 100; // Maximum speed
 int error = 0; // Difference in reflectance readings between left and right sensors
-float ts = 80.0; // Modify ts to adjust turning sharpness
+float ts = 90.0; // Modify ts to adjust turning sharpness
 
 int testMode = 1;	// Set test mode to print the sensor reading on Serial Monitor
 int mode = 0;	// mode 0 is line following mode ; mode 1 is move forward
@@ -110,7 +110,7 @@ void loop() {
     PORTB &= ~(1<<1); // Turn off LED2
     OCR0A = 80;
     OCR0B = 80;
-    delay(500);
+    delay(300);
     OCR0A = 0;
     OCR0B = 0;
     mode = 2;
@@ -131,12 +131,11 @@ void loop() {
     PORTB |= (1<<1); // Turn on LED2
     PORTB &= ~(1<<2); // Turn off LED3
 
-    if ((sensorOutput[0] != 255) && (sensorOutput[1] != 255) && (sensorOutput[2] != 255) && (sensorOutput[3] != 255)){
       //P Control 0
-      float position = (sensorOutput[0] * -2) + (sensorOutput[1] * -0.9) + (sensorOutput[2] * 0.9) + (sensorOutput[3] * 2);
+      float position = (sensorOutput[0] * -2) + (sensorOutput[1] * -0.8) + (sensorOutput[2] * 0.8) + (sensorOutput[3] * 2);
       Serial.print(position);
       Serial.println();
-      int controlSignal = (int)(position * 0.1); // Proportional gain of 1.0, adjust as needed
+      int controlSignal = (position * 0.1); // Proportional gain of 1.0, adjust as needed
   
       // Adjust motor speeds based on control signal
       int leftMotorSpeed = baseSpeed + controlSignal;
@@ -167,10 +166,10 @@ void loop() {
       OCR0A = leftMotorSpeed; //left motor
       OCR0B = rightMotorSpeed; //right motor
     
-      delay(10);
+      delay(5);
       //count = 0;
-    }
-    else if((sensorOutput[0] >= 230) && (sensorOutput[1] >= 230) && (sensorOutput[2] >= 230) && (sensorOutput[3] >= 230)){
+    
+    if((sensorOutput[0] >= 230) && (sensorOutput[1] >= 230) && (sensorOutput[2] >= 230) && (sensorOutput[3] >= 230)){
       // Stops the motors when the robot detects black
       OCR0A = 0;
       OCR0B = 0;
@@ -192,6 +191,9 @@ void loop() {
       Serial.print(sensor_2); Serial.print(" ");
       Serial.print(sensor_1); Serial.print(" ");
       Serial.print(sensor_0); Serial.print(" ");
+      Serial.println();
+      Serial.print(OCR0A);Serial.print(" ");
+      Serial.print(OCR0B);Serial.print(" ");
       Serial.println();
     }
   }
