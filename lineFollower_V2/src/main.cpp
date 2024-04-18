@@ -3,7 +3,7 @@
 // put function declarations here:
 int RGB_LED(int R, int G, int B);
 
-// LED Color
+// RGB LED Color
 #define BLUE LOW, HIGH, HIGH
 #define RED HIGH, LOW, HIGH
 #define GREEN HIGH, HIGH, LOW
@@ -30,4 +30,10 @@ int RGB_LED(int R, int G, int B){
   digitalWrite(PIN_D0, R);
   digitalWrite(PIN_D1, G);
   digitalWrite(PIN_D2, B);
+  // Options
+  // - BLUE 
+  // - RED 
+  // - GREEN
+  // - WHITE 
+  // - OFF 
 }
