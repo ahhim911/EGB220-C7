@@ -3,6 +3,7 @@
 // put function declarations here:
 int RGB_LED(int R, int G, int B);
 
+// LED Color
 #define BLUE LOW, HIGH, HIGH
 #define RED HIGH, LOW, HIGH
 #define GREEN HIGH, HIGH, LOW
@@ -11,9 +12,9 @@ int RGB_LED(int R, int G, int B);
 
 void setup() {
   // put your setup code here, to run once:
-  pinMode(5, OUTPUT); // LED4B
-  pinMode(6, OUTPUT); // LED4R
-  pinMode(7, OUTPUT); // LED4G
+  pinMode(PIN_D0, OUTPUT); // LED4B
+  pinMode(PIN_D1, OUTPUT); // LED4R
+  pinMode(PIN_D2, OUTPUT); // LED4G
 }
 
 void loop() {
@@ -26,7 +27,7 @@ void loop() {
 
 // put function definitions here:
 int RGB_LED(int R, int G, int B){
-  digitalWrite(5, R);
-  digitalWrite(6, G);
-  digitalWrite(7, B);
+  digitalWrite(PIN_D0, R);
+  digitalWrite(PIN_D1, G);
+  digitalWrite(PIN_D2, B);
 }
