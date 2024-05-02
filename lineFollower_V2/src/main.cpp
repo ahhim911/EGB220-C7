@@ -57,6 +57,8 @@ void setup() {
   pinMode(LED5_PIN, OUTPUT); // LED5 Rear light
   pinMode(CS_S3_PIN, OUTPUT); // Color Sensor S3 Ref. Col 
   pinMode(CS_S2_PIN, OUTPUT); // Color Sensor S2
+  pinMode(MT1_PIN, OUTPUT); // Motor 1
+  pinMode(MT2_PIN, OUTPUT); // Motor 2
   pinMode(S1_PIN, INPUT); // S1
   pinMode(S2_PIN, INPUT); // S2
   pinMode(S3_PIN, INPUT); // S3
@@ -75,8 +77,13 @@ void setup() {
   TCCR4A = 0b10000010; // COM4A1:0 = 10, WGM41:0 = 10
   TCCR4B = 0b00011001; // WGM43:2 = 10, CS42:0 = 001
   OCR4A = 0; // Set the duty cycle to 0
+  // PWM for Motor OC0A MT1
+  
+  // PWM for Motor OC0B MT2
+  TCCR0A = 0b10100011; // COM0A1:0 = 10, COM0B1:0 = 10, WGM01:0 = 11
+  TCCR0B = 0b00000001; // WGM02 = 0, CS02:0 = 001
 
-
+  OCR0A = 200; // Set the duty cycle to 0
 
   Serial.begin(9600); // Initialize serial communication at 9600 baud
 }
@@ -108,8 +115,6 @@ void loop() {
   digitalWrite(PIN_B0, LOW);
   digitalWrite(PIN_B1, LOW);
   digitalWrite(PIN_B2, LOW);
-  
-  
   int s1Value = analogRead(PIN_F0);
   int s2Value = analogRead(PIN_F1);
   int s3Value = analogRead(PIN_F4);
@@ -122,23 +127,24 @@ void loop() {
   CS_green = process_green_value();delay(10);
   CS_blue = process_blue_value();delay(10);
   CS_clear = process_clear_value();
+  
 
-  //Serial.print("s1: ");
-  //Serial.print(s1Value);
-  //Serial.print(", s2: ");
-  //Serial.print(s2Value);
-  //Serial.print(", s3: ");
-  //Serial.print(s3Value);
-  //Serial.print(", s4: ");
-  //Serial.print(s4Value);
-  //Serial.print(", s5: ");
-  //Serial.print(s5Value);
-  //Serial.print(", s6: ");
-  //Serial.print(s6Value);
-  //Serial.print(", s7: ");
-  //Serial.print(s7Value);
-  //Serial.print(", s8: ");
-  //Serial.print(s8Value);
+  Serial.print("s1: ");
+  Serial.print(s1Value);
+  Serial.print(", s2: ");
+  Serial.print(s2Value);
+  Serial.print(", s3: ");
+  Serial.print(s3Value);
+  Serial.print(", s4: ");
+  Serial.print(s4Value);
+  Serial.print(", s5: ");
+  Serial.print(s5Value);
+  Serial.print(", s6: ");
+  Serial.print(s6Value);
+  Serial.print(", s7: ");
+  Serial.print(s7Value);
+  Serial.print(", s8: ");
+  Serial.print(s8Value);
   Serial.print(", RED: ");
   Serial.print(CS_red);
   Serial.print(", BLUE: ");
