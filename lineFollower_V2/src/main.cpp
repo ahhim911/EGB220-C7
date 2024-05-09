@@ -10,8 +10,6 @@ int process_green_value();
 int process_blue_value();
 int process_clear_value();
 
-// Gloal variables declarations
-int CS_red, CS_green, CS_blue, CS_clear;
 
 // PIN Definitions
 #define LED1_PIN 0
@@ -46,14 +44,26 @@ int CS_red, CS_green, CS_blue, CS_clear;
 #define WHITE LOW, LOW, LOW
 #define OFF HIGH, HIGH, HIGH
 
-int sensitivity = 100;
-const int baseSpeed = 40; // Base speed for both motors
-const int maxSpeed = 80; // Maximum speed
-int error = 0; // Difference in reflectance readings between left and right sensors
-float ts = 90.0; // Modify ts to adjust turning sharpness
-char obstacle;
+// State Machine
+typedef enum{
+  INIT,
+  LINE_FOLLOWING, 
+  SLOWZONE,
+  OBSTACLE, 
+  MARKER,
+  ERROR
+} State;
 
-int testMode = 1;	// Set test mode to print the sensor reading on Serial Monitor
+// Gloal variables declarations
+int CS_red, CS_green, CS_blue, CS_clear;
+const int initbaseSpeed = 50; // Base speed for both motors
+const int initmaxSpeed = 140; // Maximum speed
+int baseSpeed = initbaseSpeed; // Base speed for both motors
+int maxSpeed = initmaxSpeed; // Maximum speed
+char obstacle;
+int obstacleFlag = 0;
+State state = INIT;
+
 int mode = 0;	// mode 0 is line following mode ; mode 1 is move forward
 
 volatile uint8_t sensorOutput[10]; //ADC sensor value array
@@ -131,26 +141,21 @@ void loop() {
   // put your main code here, to run repeatedly:
   getSensorReading();
   //mode = 0;
-  if ( mode == 2 ){ // Error mode
-      OCR0A = 0;
-      OCR0B = 0;
-      digitalWrite(LED1_PIN, HIGH); // Turn off LED1
-      digitalWrite(LED2_PIN, LOW); // Turn on LED2
-      if((sensorOutput[0] <= 230) && (sensorOutput[1] <= 230) && (sensorOutput[2] <= 230) && (sensorOutput[3] <= 230) && (sensorOutput[4] <= 230) && (sensorOutput[5] <= 230) && (sensorOutput[6] <= 230) && (sensorOutput[7] <= 230)){
-      mode = 0; // line following
-      }
-  } 
-  else if ( mode == 0 ) { // line following
-    digitalWrite(LED1_PIN, LOW); // Turn on LED1
-    digitalWrite(LED2_PIN, HIGH); // Turn off LED2
+  switch (state) {
+		case (INIT):
+      state = LINE_FOLLOWING;
+			break;
+		case (LINE_FOLLOWING):
+      digitalWrite(LED1_PIN, LOW); // Turn on LED1
+      digitalWrite(LED2_PIN, HIGH); // Turn off LED2
 
-      //P Control 0
+      //---------P Control---------
       float position = (sensorOutput[0] * -2) + (sensorOutput[1] * -1.6) + (sensorOutput[2] * -0.8) + (sensorOutput[3] * -0.8)+ (sensorOutput[4] * 0.8) + (sensorOutput[5] * 0.8) + (sensorOutput[6] * 1.6) + (sensorOutput[7] * 2);
       Serial.print("In The MATRIX");
-       //Serial.print(sensorOutput[3]);
+      //Serial.print(sensorOutput[3]);
       // Serial.println();
       int controlSignal = (position * 0.1); // Proportional gain of 1.0, adjust as needed
-  
+    
       // Adjust motor speeds based on control signal
       int leftMotorSpeed = baseSpeed + controlSignal;
       int rightMotorSpeed = baseSpeed - controlSignal;
@@ -161,20 +166,69 @@ void loop() {
 
       OCR0A = leftMotorSpeed; //left motor
       OCR0B = rightMotorSpeed; //right motor
-    
+      
       delay(5);
       //count = 0;
-    
-    if((sensorOutput[0] >= 230) && (sensorOutput[1] >= 230) && (sensorOutput[2] >= 230) && (sensorOutput[3] >= 230) && (sensorOutput[4] >= 230) && (sensorOutput[5] >= 230) && (sensorOutput[6] >= 230) && (sensorOutput[7] >= 230)){
+      
+      //---------Straight Line behavior---------
+      if ((sensorOutput[4] + sensorOutput[5]) < 200)
+      {
+        OCR4A = 32; // Set the duty cycle to 25%
+        Serial.print("Straight Line");
+      } else {
+        OCR4A = 255; // Set the duty cycle to 100%
+        Serial.print("Turning");
+      }
+      
+      if((sensorOutput[0] >= 230) && (sensorOutput[1] >= 230) && (sensorOutput[2] >= 230) && (sensorOutput[3] >= 230) && (sensorOutput[4] >= 230) && (sensorOutput[5] >= 230) && (sensorOutput[6] >= 230) && (sensorOutput[7] >= 230)){
       // Stops the motors when the robot detects black
       OCR0A = 0;
       OCR0B = 0;
-      delay(5000);
-      mode = 2; // error mode
+      state = ERROR; // error mode
       }
-  }
+      if(sensorOutput[8] < 235){
+        obstacle = 'Y';
+        state = OBSTACLE; // obstacle mode
+      }
+			break;
+    case (SLOWZONE):
+      digitalWrite(LED1_PIN, LOW); // Turn on LED1
+      digitalWrite(LED2_PIN, HIGH); // Turn off LED2
+      OCR0A = 0; // Set the duty cycle to 0%
+      OCR0B = 0; // Set the duty cycle to 0%
+      delay(5000);
+      state = LINE_FOLLOWING;
+      break;
+    case (OBSTACLE):
+      obstacle = 'Y';
+      digitalWrite(LED3_PIN, HIGH); // 
+      baseSpeed = initbaseSpeed / 2;
+      maxSpeed = initmaxSpeed / 2;
 
-  //Check button state
+      if(sensorOutput[8] > 235){
+        obstacle = 'N';
+        digitalWrite(LED3_PIN, LOW); // 
+        baseSpeed = initbaseSpeed;
+        maxSpeed = initmaxSpeed;
+        state = LINE_FOLLOWING;
+      }
+      break;
+    case (MARKER):
+      break;
+    case (ERROR):
+      OCR0A = 0;
+      OCR0B = 0;
+      digitalWrite(LED1_PIN, HIGH); // Turn off LED1
+      digitalWrite(LED2_PIN, LOW); // Turn on LED2
+      if((sensorOutput[0] <= 230) && (sensorOutput[1] <= 230) && (sensorOutput[2] <= 230) && (sensorOutput[3] <= 230) && (sensorOutput[4] <= 230) && (sensorOutput[5] <= 230) && (sensorOutput[6] <= 230) && (sensorOutput[7] <= 230)){
+      state = LINE_FOLLOWING; // line following
+      }
+		default:
+			state = INIT;
+	}
+
+  //---------Check button state---------
+
   // int SW1 = digitalRead(SW1_PIN);
   // int SW2 = digitalRead(SW2_PIN);
   // if (SW1 == 1)
@@ -185,28 +239,31 @@ void loop() {
   // else if (SW2 == 1)
   // {
   //  //RGB_LED(GREEN);
-  //  OCR4A = 64; // Set the duty cycle to 50%
+  //  OCR4A = 255; // Set the duty cycle to 100%
   // }
   // else
   // {
   //  //RGB_LED(WHITE);
-  //  OCR4A = 255; // Set the duty cycle to 100%
+  //  OCR4A = 64; // Set the duty cycle to 25%
   // }
   //delay(1000);
 
-  // Obstacle Detection
+  //-------------Obstacle Detection----------------
   if(sensorOutput[8] > 235){
     obstacle = 'N';
     digitalWrite(LED3_PIN, LOW); // 
+    baseSpeed = initbaseSpeed;
+    maxSpeed = initmaxSpeed;
   } else {
     obstacle = 'Y';
     digitalWrite(LED3_PIN, HIGH); // 
+    baseSpeed = initbaseSpeed / 2;
+    maxSpeed = initmaxSpeed / 2;
   }
 
 
 
-  RGB_LED(OFF);
-  digitalWrite(LED5_PIN, HIGH); // Rear light
+  RGB_LED(WHITE);
   CS_red = process_red_value();delay(10);
   CS_green = process_green_value();delay(10);
   CS_blue = process_blue_value();delay(10);
@@ -232,6 +289,8 @@ void loop() {
   Serial.print(", Obstacle: ");
   Serial.print(sensorOutput[8]);
   Serial.print(obstacle);
+  Serial.print(", Marker: ");
+  Serial.print(sensorOutput[9]);
   // Serial.print(", RED: ");
   // Serial.print(CS_red);
   // Serial.print(", BLUE: ");
