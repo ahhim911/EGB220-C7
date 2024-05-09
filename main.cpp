@@ -17,7 +17,7 @@ int CS_red, CS_green, CS_blue, CS_clear;
 #define LED1_PIN 0
 #define LED2_PIN 1
 #define LED3_PIN 2
-#define LED4B_PIN 5
+#define LED4B_PIN 3
 #define LED4R_PIN 6
 #define LED4G_PIN 7
 #define LED5_PIN 10
@@ -36,7 +36,7 @@ int CS_red, CS_green, CS_blue, CS_clear;
 #define S11_PIN 11
 #define SW1_PIN 8
 #define SW2_PIN 9
-#define MT1_PIN 3
+#define MT1_PIN 5
 #define MT2_PIN 4
 
 // RGB LED Color
@@ -63,16 +63,17 @@ void getSensorReading()
   int Value;
 	for (sens_num = 0; sens_num < 8; sens_num++)
 	{
-    if (sens_num == 0) Value = analogRead(PIN_F0);
-    if (sens_num == 1) Value = analogRead(PIN_F1);
-    if (sens_num == 2) Value = analogRead(PIN_F4);
-    if (sens_num == 3) Value = analogRead(PIN_F5);
-    if (sens_num == 4) Value = analogRead(PIN_F6);
-    if (sens_num == 5) Value = analogRead(PIN_F7);
-    if (sens_num == 6) Value = analogRead(PIN_B6);
-    if (sens_num == 7) Value = analogRead(PIN_B5);
+    if (sens_num == 0) Value = analogRead(S1_PIN);
+    if (sens_num == 1) Value = analogRead(S2_PIN);
+    if (sens_num == 2) Value = analogRead(S3_PIN);
+    if (sens_num == 3) Value = analogRead(S4_PIN);
+    if (sens_num == 4) Value = analogRead(S5_PIN);
+    if (sens_num == 5) Value = analogRead(S6_PIN);
+    if (sens_num == 6) Value = analogRead(S7_PIN);
+    if (sens_num == 7) Value = analogRead(S8_PIN);
 
-    sensorOutput[sens_num] = ((Value<<8)/1000);
+    sensorOutput[sens_num] = Value>>2;
+    // sensorOutput[sens_num] = ((Value<<8)/1000);
   }
 }
 
@@ -132,7 +133,7 @@ void loop() {
       OCR0B = 0;
       digitalWrite(LED3_PIN, LOW); // Turn off LED3
       digitalWrite(LED2_PIN, HIGH); // Turn on LED2
-      if((sensorOutput[0] <= 230) && (sensorOutput[1] <= 230) && (sensorOutput[2] <= 230) && (sensorOutput[3] <= 230)){
+      if((sensorOutput[0] <= 230) && (sensorOutput[1] <= 230) && (sensorOutput[2] <= 230) && (sensorOutput[3] <= 230) && (sensorOutput[4] <= 230) && (sensorOutput[5] <= 230) && (sensorOutput[6] <= 230) && (sensorOutput[7] <= 230)){
       mode = 0; // line following
       }
   } 
@@ -141,7 +142,7 @@ void loop() {
     digitalWrite(LED2_PIN, LOW); // Turn off LED2
 
       //P Control 0
-      float position = (sensorOutput[0] * -2) + (sensorOutput[1] * -1.6) + (sensorOutput[2] * -0.8) + (sensorOutput[5] * 0.8) + (sensorOutput[6] * -1.6) + (sensorOutput[7] * 2);
+      float position = (sensorOutput[0] * -2) + (sensorOutput[1] * -1.6) + (sensorOutput[2] * -0.8) + (sensorOutput[3] * -0.8)+ (sensorOutput[4] * 0.8) + (sensorOutput[5] * 0.8) + (sensorOutput[6] * 1.6) + (sensorOutput[7] * 2);
       Serial.print("In The MATRIX");
       Serial.print(sensorOutput[3]);
       // Serial.println();
@@ -179,7 +180,7 @@ void loop() {
       delay(5);
       //count = 0;
     
-    if((sensorOutput[0] >= 230) && (sensorOutput[1] >= 230) && (sensorOutput[2] >= 230) && (sensorOutput[3] >= 230)){
+    if((sensorOutput[0] >= 230) && (sensorOutput[1] >= 230) && (sensorOutput[2] >= 230) && (sensorOutput[3] >= 230) && (sensorOutput[4] <= 230) && (sensorOutput[5] <= 230) && (sensorOutput[6] <= 230) && (sensorOutput[7] <= 230)){
       // Stops the motors when the robot detects black
       OCR0A = 0;
       OCR0B = 0;
@@ -207,20 +208,12 @@ void loop() {
   //  //RGB_LED(WHITE);
   //  OCR4A = 255; // Set the duty cycle to 100%
   //}
-  delay(1000);
+  //delay(1000);
   RGB_LED(OFF);
   digitalWrite(LED5_PIN, LOW); // Rear light
   digitalWrite(PIN_B0, LOW);
   digitalWrite(PIN_B1, LOW);
   digitalWrite(PIN_B2, LOW);
-  int s1Value = analogRead(PIN_F0);
-  int s2Value = analogRead(PIN_F1);
-  int s3Value = analogRead(PIN_F4);
-  int s4Value = analogRead(PIN_F5);
-  int s5Value = analogRead(PIN_F6);
-  int s6Value = analogRead(PIN_F7);
-  int s7Value = analogRead(PIN_B6);
-  int s8Value = analogRead(PIN_B5);
   CS_red = process_red_value();delay(10);
   CS_green = process_green_value();delay(10);
   CS_blue = process_blue_value();delay(10);
@@ -228,29 +221,29 @@ void loop() {
   
 
   Serial.print("s1: ");
-  Serial.print(s1Value);
+  Serial.print(sensorOutput[0]);
   Serial.print(", s2: ");
-  Serial.print(s2Value);
+  Serial.print(sensorOutput[1]);
   Serial.print(", s3: ");
-  Serial.print(s3Value);
+  Serial.print(sensorOutput[2]);
   Serial.print(", s4: ");
-  Serial.print(s4Value);
+  Serial.print(sensorOutput[3]);
   Serial.print(", s5: ");
-  Serial.print(s5Value);
+  Serial.print(sensorOutput[4]);
   Serial.print(", s6: ");
-  Serial.print(s6Value);
+  Serial.print(sensorOutput[5]);
   Serial.print(", s7: ");
-  Serial.print(s7Value);
+  Serial.print(sensorOutput[6]);
   Serial.print(", s8: ");
-  Serial.print(s8Value);
-  Serial.print(", RED: ");
-  Serial.print(CS_red);
-  Serial.print(", BLUE: ");
-  Serial.print(CS_blue);
-  Serial.print(", GREEN: ");
-  Serial.print(CS_green);
-  Serial.print(", CLEAR: ");
-  Serial.print(CS_clear);
+  Serial.print(sensorOutput[7]);
+  // Serial.print(", RED: ");
+  // Serial.print(CS_red);
+  // Serial.print(", BLUE: ");
+  // Serial.print(CS_blue);
+  // Serial.print(", GREEN: ");
+  // Serial.print(CS_green);
+  // Serial.print(", CLEAR: ");
+  // Serial.print(CS_clear);
   Serial.println();
 
     //Serial.println(s10Value); // Print the value of S10 to the serial monitor
@@ -258,9 +251,9 @@ void loop() {
 
 // put function definitions here:
 int RGB_LED(int R, int G, int B){
-  digitalWrite(PIN_D0, R);
-  digitalWrite(PIN_D1, G);
-  digitalWrite(PIN_D2, B);
+  digitalWrite(LED4R_PIN, R);
+  digitalWrite(LED4G_PIN, G);
+  digitalWrite(LED4B_PIN, B);
   // Options
   // - BLUE - OBSTACLE
   // - RED - STOP
