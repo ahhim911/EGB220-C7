@@ -47,21 +47,22 @@ int CS_red, CS_green, CS_blue, CS_clear;
 #define OFF HIGH, HIGH, HIGH
 
 int sensitivity = 100;
-const int baseSpeed = 60; // Base speed for both motors
-const int maxSpeed = 100; // Maximum speed
+const int baseSpeed = 40; // Base speed for both motors
+const int maxSpeed = 80; // Maximum speed
 int error = 0; // Difference in reflectance readings between left and right sensors
 float ts = 90.0; // Modify ts to adjust turning sharpness
+char obstacle;
 
 int testMode = 1;	// Set test mode to print the sensor reading on Serial Monitor
 int mode = 0;	// mode 0 is line following mode ; mode 1 is move forward
 
-volatile uint8_t sensorOutput[8]; //ADC sensor value array
+volatile uint8_t sensorOutput[10]; //ADC sensor value array
 
 void getSensorReading()
 {	
 	int sens_num;
   int Value;
-	for (sens_num = 0; sens_num < 8; sens_num++)
+	for (sens_num = 0; sens_num < 10; sens_num++)
 	{
     if (sens_num == 0) Value = analogRead(S1_PIN);
     if (sens_num == 1) Value = analogRead(S2_PIN);
@@ -71,6 +72,8 @@ void getSensorReading()
     if (sens_num == 5) Value = analogRead(S6_PIN);
     if (sens_num == 6) Value = analogRead(S7_PIN);
     if (sens_num == 7) Value = analogRead(S8_PIN);
+    if (sens_num == 8) Value = analogRead(S9_PIN); // Obstacle
+    if (sens_num == 9) Value = analogRead(S10_PIN); // Marker
 
     sensorOutput[sens_num] = Value>>2;
     // sensorOutput[sens_num] = ((Value<<8)/1000);
@@ -127,24 +130,24 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   getSensorReading();
-  mode = 0;
-  if ( mode == 2 ){
+  //mode = 0;
+  if ( mode == 2 ){ // Error mode
       OCR0A = 0;
       OCR0B = 0;
-      digitalWrite(LED3_PIN, LOW); // Turn off LED3
-      digitalWrite(LED2_PIN, HIGH); // Turn on LED2
+      digitalWrite(LED1_PIN, HIGH); // Turn off LED1
+      digitalWrite(LED2_PIN, LOW); // Turn on LED2
       if((sensorOutput[0] <= 230) && (sensorOutput[1] <= 230) && (sensorOutput[2] <= 230) && (sensorOutput[3] <= 230) && (sensorOutput[4] <= 230) && (sensorOutput[5] <= 230) && (sensorOutput[6] <= 230) && (sensorOutput[7] <= 230)){
       mode = 0; // line following
       }
   } 
   else if ( mode == 0 ) { // line following
-    digitalWrite(LED3_PIN, HIGH); // Turn on LED3
-    digitalWrite(LED2_PIN, LOW); // Turn off LED2
+    digitalWrite(LED1_PIN, LOW); // Turn on LED1
+    digitalWrite(LED2_PIN, HIGH); // Turn off LED2
 
       //P Control 0
       float position = (sensorOutput[0] * -2) + (sensorOutput[1] * -1.6) + (sensorOutput[2] * -0.8) + (sensorOutput[3] * -0.8)+ (sensorOutput[4] * 0.8) + (sensorOutput[5] * 0.8) + (sensorOutput[6] * 1.6) + (sensorOutput[7] * 2);
       Serial.print("In The MATRIX");
-      Serial.print(sensorOutput[3]);
+       //Serial.print(sensorOutput[3]);
       // Serial.println();
       int controlSignal = (position * 0.1); // Proportional gain of 1.0, adjust as needed
   
@@ -155,24 +158,6 @@ void loop() {
       // Constrain speeds to allowable range
       leftMotorSpeed = constrain(leftMotorSpeed, 0, maxSpeed);
       rightMotorSpeed = constrain(rightMotorSpeed, 0, maxSpeed);
-  
-
-      /*
-      // P Control 1
-      int leftSensorAverage = (sensorOutput[0] * 5 + sensorOutput[1]) / 6;
-      int rightSensorAverage = (sensorOutput[2] + sensorOutput[3] * 5) / 6;
-      // Calculate ratio
-      float leftRatio = leftSensorAverage / rightSensorAverage;
-      float rightRatio = rightSensorAverage / leftSensorAverage;
-
-      int leftMotorSpeed = baseSpeed - (leftRatio * ts);
-      int rightMotorSpeed = baseSpeed - (rightRatio * ts);
-      leftMotorSpeed = constrain(leftMotorSpeed, 0, 255);
-      rightMotorSpeed = constrain(rightMotorSpeed, 0, 255);
-    
-      //Serial.print("left:"); Serial.print(leftMotorSpeed);
-      //Serial.print("  right:"); Serial.print(rightMotorSpeed); Serial.println();
-      */
 
       OCR0A = leftMotorSpeed; //left motor
       OCR0B = rightMotorSpeed; //right motor
@@ -180,35 +165,46 @@ void loop() {
       delay(5);
       //count = 0;
     
-    if((sensorOutput[0] >= 230) && (sensorOutput[1] >= 230) && (sensorOutput[2] >= 230) && (sensorOutput[3] >= 230) && (sensorOutput[4] <= 230) && (sensorOutput[5] <= 230) && (sensorOutput[6] <= 230) && (sensorOutput[7] <= 230)){
+    if((sensorOutput[0] >= 230) && (sensorOutput[1] >= 230) && (sensorOutput[2] >= 230) && (sensorOutput[3] >= 230) && (sensorOutput[4] >= 230) && (sensorOutput[5] >= 230) && (sensorOutput[6] >= 230) && (sensorOutput[7] >= 230)){
       // Stops the motors when the robot detects black
       OCR0A = 0;
       OCR0B = 0;
-      digitalWrite(LED3_PIN, LOW); // Turn off LED3
-      digitalWrite(LED2_PIN, HIGH); // Turn on LED2
       delay(5000);
       mode = 2; // error mode
       }
   }
+
   //Check button state
-  int SW1 = digitalRead(SW1_PIN);
-  int SW2 = digitalRead(SW2_PIN);
-  if (SW1 == 1)
-  {
-   //RGB_LED(RED);
-   OCR4A = 0; // Set the duty cycle to 0%
-  }
-  else if (SW2 == 1)
-  {
-   //RGB_LED(GREEN);
-   OCR4A = 64; // Set the duty cycle to 50%
-  }
-  else
-  {
-   //RGB_LED(WHITE);
-   OCR4A = 255; // Set the duty cycle to 100%
-  }
+  // int SW1 = digitalRead(SW1_PIN);
+  // int SW2 = digitalRead(SW2_PIN);
+  // if (SW1 == 1)
+  // {
+  //  //RGB_LED(RED);
+  //  OCR4A = 0; // Set the duty cycle to 0%
+  // }
+  // else if (SW2 == 1)
+  // {
+  //  //RGB_LED(GREEN);
+  //  OCR4A = 64; // Set the duty cycle to 50%
+  // }
+  // else
+  // {
+  //  //RGB_LED(WHITE);
+  //  OCR4A = 255; // Set the duty cycle to 100%
+  // }
   //delay(1000);
+
+  // Obstacle Detection
+  if(sensorOutput[8] > 235){
+    obstacle = 'N';
+    digitalWrite(LED3_PIN, LOW); // 
+  } else {
+    obstacle = 'Y';
+    digitalWrite(LED3_PIN, HIGH); // 
+  }
+
+
+
   RGB_LED(OFF);
   digitalWrite(LED5_PIN, HIGH); // Rear light
   CS_red = process_red_value();delay(10);
@@ -233,6 +229,9 @@ void loop() {
   Serial.print(sensorOutput[6]);
   Serial.print(", s8: ");
   Serial.print(sensorOutput[7]);
+  Serial.print(", Obstacle: ");
+  Serial.print(sensorOutput[8]);
+  Serial.print(obstacle);
   // Serial.print(", RED: ");
   // Serial.print(CS_red);
   // Serial.print(", BLUE: ");
