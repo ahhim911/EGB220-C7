@@ -50,19 +50,22 @@ typedef enum{
   LINE_FOLLOWING, 
   SLOWZONE,
   OBSTACLE, 
-  MARKER,
+  //MARKER,
   ERROR
 } State;
 
 // Gloal variables declarations
 int CS_red, CS_green, CS_blue, CS_clear;
-const int initbaseSpeed = 50; // Base speed for both motors
-const int initmaxSpeed = 140; // Maximum speed
+const int initbaseSpeed = 90; // Base speed for both motors
+const int initmaxSpeed = 130; // Maximum speed
 int baseSpeed = initbaseSpeed; // Base speed for both motors
 int maxSpeed = initmaxSpeed; // Maximum speed
 char obstacle;
-int obstacleFlag = 0;
-State state = INIT;
+int obstacleThershold = 170;
+int markerThershold = 225;
+int errorThreshold = 200;
+volatile State state = INIT;
+int count = 0;
 
 int mode = 0;	// mode 0 is line following mode ; mode 1 is move forward
 
@@ -141,92 +144,91 @@ void loop() {
   // put your main code here, to run repeatedly:
   getSensorReading();
   //mode = 0;
-  switch (state) {
-		case (INIT):
+  switch (state){
+		case INIT:
       state = LINE_FOLLOWING;
-			break;
-		case (LINE_FOLLOWING):
+      break;
+		case LINE_FOLLOWING: {
       digitalWrite(LED1_PIN, LOW); // Turn on LED1
-      digitalWrite(LED2_PIN, HIGH); // Turn off LED2
-
-      //---------P Control---------
-      float position = (sensorOutput[0] * -2) + (sensorOutput[1] * -1.6) + (sensorOutput[2] * -0.8) + (sensorOutput[3] * -0.8)+ (sensorOutput[4] * 0.8) + (sensorOutput[5] * 0.8) + (sensorOutput[6] * 1.6) + (sensorOutput[7] * 2);
-      Serial.print("In The MATRIX");
-      //Serial.print(sensorOutput[3]);
-      // Serial.println();
-      int controlSignal = (position * 0.1); // Proportional gain of 1.0, adjust as needed
-    
-      // Adjust motor speeds based on control signal
-      int leftMotorSpeed = baseSpeed + controlSignal;
-      int rightMotorSpeed = baseSpeed - controlSignal;
-
-      // Constrain speeds to allowable range
-      leftMotorSpeed = constrain(leftMotorSpeed, 0, maxSpeed);
-      rightMotorSpeed = constrain(rightMotorSpeed, 0, maxSpeed);
-
-      OCR0A = leftMotorSpeed; //left motor
-      OCR0B = rightMotorSpeed; //right motor
-      
-      delay(5);
-      //count = 0;
-      
+      RGB_LED(WHITE); 
+      maxSpeed = initmaxSpeed;
       //---------Straight Line behavior---------
       if ((sensorOutput[4] + sensorOutput[5]) < 200)
-      {
+      {                   // Straight
         OCR4A = 32; // Set the duty cycle to 25%
-        Serial.print("Straight Line");
-      } else {
+        digitalWrite(LED2_PIN, HIGH); // Turn on LED2
+        baseSpeed = initbaseSpeed;
+      } else {            // Turning
         OCR4A = 255; // Set the duty cycle to 100%
-        Serial.print("Turning");
+        digitalWrite(LED2_PIN, LOW); // Turn off LED2
+        baseSpeed = initbaseSpeed - 20;
       }
       
-      if((sensorOutput[0] >= 230) && (sensorOutput[1] >= 230) && (sensorOutput[2] >= 230) && (sensorOutput[3] >= 230) && (sensorOutput[4] >= 230) && (sensorOutput[5] >= 230) && (sensorOutput[6] >= 230) && (sensorOutput[7] >= 230)){
+      
+      if((sensorOutput[0] >= errorThreshold) && (sensorOutput[1] >= errorThreshold) && (sensorOutput[2] >= errorThreshold) && (sensorOutput[3] >= errorThreshold) && (sensorOutput[4] >= errorThreshold) && (sensorOutput[5] >= errorThreshold) && (sensorOutput[6] >= errorThreshold) && (sensorOutput[7] >= errorThreshold)){
       // Stops the motors when the robot detects black
       OCR0A = 0;
       OCR0B = 0;
       state = ERROR; // error mode
       }
-      if(sensorOutput[8] < 235){
+      if(sensorOutput[8] < obstacleThershold){
         obstacle = 'Y';
         state = OBSTACLE; // obstacle mode
+        Serial.println("Obstacle Detected");
       }
-			break;
-    case (SLOWZONE):
+    }
+    break;
+    case SLOWZONE:{
       digitalWrite(LED1_PIN, LOW); // Turn on LED1
       digitalWrite(LED2_PIN, HIGH); // Turn off LED2
-      OCR0A = 0; // Set the duty cycle to 0%
-      OCR0B = 0; // Set the duty cycle to 0%
-      delay(5000);
       state = LINE_FOLLOWING;
-      break;
-    case (OBSTACLE):
-      obstacle = 'Y';
+    }
+    break;
+    case OBSTACLE: {
+      Serial.println("Enter obstacle state");
       digitalWrite(LED3_PIN, HIGH); // 
-      baseSpeed = initbaseSpeed / 2;
-      maxSpeed = initmaxSpeed / 2;
-
-      if(sensorOutput[8] > 235){
-        obstacle = 'N';
-        digitalWrite(LED3_PIN, LOW); // 
-        baseSpeed = initbaseSpeed;
-        maxSpeed = initmaxSpeed;
-        state = LINE_FOLLOWING;
+      baseSpeed = 65;
+      maxSpeed = 80;
+      //---------Straight Line behavior---------
+      if ((sensorOutput[4] + sensorOutput[5]) < 200)
+      {                   // Straight
+        OCR4A = 32; // Set the duty cycle to 25%
+        digitalWrite(LED2_PIN, HIGH); // Turn on LED2
+      } else {            // Turning
+        OCR4A = 255; // Set the duty cycle to 100%
+        digitalWrite(LED2_PIN, LOW); // Turn off LED2
       }
-      break;
-    case (MARKER):
-      break;
-    case (ERROR):
-      OCR0A = 0;
-      OCR0B = 0;
+      if(sensorOutput[8] > obstacleThershold){
+        digitalWrite(LED3_PIN, LOW); // 
+        count++;
+        if (count > 800) {
+          baseSpeed = initbaseSpeed;
+          maxSpeed = initmaxSpeed;
+          count = 0;
+          state = LINE_FOLLOWING;
+          Serial.println("Exit obstacle state");
+        }
+      } else {
+        count = 0;
+      }
+    }
+    break;
+    //case (MARKER):
+    //break;
+    case ERROR:{
+      maxSpeed = 0;
+      RGB_LED(OFF);
+      OCR4A = 0; // Set the duty cycle to 0%
       digitalWrite(LED1_PIN, HIGH); // Turn off LED1
       digitalWrite(LED2_PIN, LOW); // Turn on LED2
-      if((sensorOutput[0] <= 230) && (sensorOutput[1] <= 230) && (sensorOutput[2] <= 230) && (sensorOutput[3] <= 230) && (sensorOutput[4] <= 230) && (sensorOutput[5] <= 230) && (sensorOutput[6] <= 230) && (sensorOutput[7] <= 230)){
+      if((sensorOutput[0] <= errorThreshold) | (sensorOutput[1] <= errorThreshold) | (sensorOutput[2] <= errorThreshold) | (sensorOutput[3] <= errorThreshold) | (sensorOutput[4] <= errorThreshold) | (sensorOutput[5] <= errorThreshold) | (sensorOutput[6] <= errorThreshold) | (sensorOutput[7] <= errorThreshold)){
       state = LINE_FOLLOWING; // line following
       }
+    }
+    break;
 		default:
 			state = INIT;
 	}
-
   //---------Check button state---------
 
   // int SW1 = digitalRead(SW1_PIN);
@@ -246,62 +248,62 @@ void loop() {
   //  //RGB_LED(WHITE);
   //  OCR4A = 64; // Set the duty cycle to 25%
   // }
-  //delay(1000);
 
-  //-------------Obstacle Detection----------------
-  if(sensorOutput[8] > 235){
-    obstacle = 'N';
-    digitalWrite(LED3_PIN, LOW); // 
-    baseSpeed = initbaseSpeed;
-    maxSpeed = initmaxSpeed;
-  } else {
-    obstacle = 'Y';
-    digitalWrite(LED3_PIN, HIGH); // 
-    baseSpeed = initbaseSpeed / 2;
-    maxSpeed = initmaxSpeed / 2;
-  }
+      //---------P Control---------
+      float position = (sensorOutput[0] * -2) + (sensorOutput[1] * -1.5) + (sensorOutput[2] * -0.9) + (sensorOutput[3] * -0.9)+ (sensorOutput[4] * 0.9) + (sensorOutput[5] * 0.9) + (sensorOutput[6] * 1.5) + (sensorOutput[7] * 2);
+      //Serial.print(sensorOutput[3]);
+      // Serial.println();
+      int controlSignal = (position * 0.1); // Proportional gain of 1.0, adjust as needed
+    
+      // Adjust motor speeds based on control signal
+      int leftMotorSpeed = baseSpeed + controlSignal;
+      int rightMotorSpeed = baseSpeed - controlSignal;
+
+      // Constrain speeds to allowable range
+      leftMotorSpeed = constrain(leftMotorSpeed, 0, maxSpeed);
+      rightMotorSpeed = constrain(rightMotorSpeed, 0, maxSpeed);
+
+      OCR0A = leftMotorSpeed; //left motor
+      OCR0B = rightMotorSpeed; //right motor
+      
+      delay(5);
 
 
-
-  RGB_LED(WHITE);
   CS_red = process_red_value();delay(10);
   CS_green = process_green_value();delay(10);
   CS_blue = process_blue_value();delay(10);
   CS_clear = process_clear_value();
   
 
-  Serial.print("s1: ");
-  Serial.print(sensorOutput[0]);
-  Serial.print(", s2: ");
-  Serial.print(sensorOutput[1]);
-  Serial.print(", s3: ");
-  Serial.print(sensorOutput[2]);
-  Serial.print(", s4: ");
-  Serial.print(sensorOutput[3]);
-  Serial.print(", s5: ");
-  Serial.print(sensorOutput[4]);
-  Serial.print(", s6: ");
-  Serial.print(sensorOutput[5]);
-  Serial.print(", s7: ");
-  Serial.print(sensorOutput[6]);
-  Serial.print(", s8: ");
-  Serial.print(sensorOutput[7]);
+  // Serial.print("s1: ");
+  // Serial.print(sensorOutput[0]);
+  // Serial.print(", s2: ");
+  // Serial.print(sensorOutput[1]);
+  // Serial.print(", s3: ");
+  // Serial.print(sensorOutput[2]);
+  // Serial.print(", s4: ");
+  // Serial.print(sensorOutput[3]);
+  // Serial.print(", s5: ");
+  // Serial.print(sensorOutput[4]);
+  // Serial.print(", s6: ");
+  // Serial.print(sensorOutput[5]);
+  // Serial.print(", s7: ");
+  // Serial.print(sensorOutput[6]);
+  // Serial.print(", s8: ");
+  // Serial.print(sensorOutput[7]);
   Serial.print(", Obstacle: ");
   Serial.print(sensorOutput[8]);
-  Serial.print(obstacle);
   Serial.print(", Marker: ");
   Serial.print(sensorOutput[9]);
-  // Serial.print(", RED: ");
-  // Serial.print(CS_red);
-  // Serial.print(", BLUE: ");
-  // Serial.print(CS_blue);
-  // Serial.print(", GREEN: ");
-  // Serial.print(CS_green);
-  // Serial.print(", CLEAR: ");
-  // Serial.print(CS_clear);
+  Serial.print(", RED: ");
+  Serial.print(CS_red);
+  Serial.print(", BLUE: ");
+  Serial.print(CS_blue);
+  Serial.print(", GREEN: ");
+  Serial.print(CS_green);
+  Serial.print(", CLEAR: ");
+  Serial.print(CS_clear);
   Serial.println();
-
-    //Serial.println(s10Value); // Print the value of S10 to the serial monitor
 }
 
 // put function definitions here:
