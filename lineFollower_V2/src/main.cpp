@@ -60,14 +60,12 @@ const int initbaseSpeed = 90; // Base speed for both motors
 const int initmaxSpeed = 130; // Maximum speed
 int baseSpeed = initbaseSpeed; // Base speed for both motors
 int maxSpeed = initmaxSpeed; // Maximum speed
-char obstacle;
 int obstacleThershold = 170;
 int markerThershold = 225;
 int errorThreshold = 200;
 volatile State state = INIT;
 int count = 0;
 
-int mode = 0;	// mode 0 is line following mode ; mode 1 is move forward
 
 volatile uint8_t sensorOutput[10]; //ADC sensor value array
 
@@ -143,7 +141,11 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   getSensorReading();
-  //mode = 0;
+  CS_red = process_red_value();delay(10);
+  CS_green = process_green_value();delay(10);
+  CS_blue = process_blue_value();delay(10);
+  CS_clear = process_clear_value();
+  
   switch (state){
 		case INIT:
       state = LINE_FOLLOWING;
@@ -151,7 +153,6 @@ void loop() {
 		case LINE_FOLLOWING: {
       digitalWrite(LED1_PIN, LOW); // Turn on LED1
       RGB_LED(WHITE); 
-      maxSpeed = initmaxSpeed;
       //---------Straight Line behavior---------
       if ((sensorOutput[4] + sensorOutput[5]) < 200)
       {                   // Straight
@@ -172,9 +173,8 @@ void loop() {
       state = ERROR; // error mode
       }
       if(sensorOutput[8] < obstacleThershold){
-        obstacle = 'Y';
         state = OBSTACLE; // obstacle mode
-        Serial.println("Obstacle Detected");
+        Serial.println("Obstacle Detected");  // For Debugging
       }
     }
     break;
@@ -185,44 +185,52 @@ void loop() {
     }
     break;
     case OBSTACLE: {
-      Serial.println("Enter obstacle state");
+      Serial.println("Enter obstacle state"); // For Debugging
       digitalWrite(LED3_PIN, HIGH); // 
       baseSpeed = 65;
       maxSpeed = 80;
       //---------Straight Line behavior---------
       if ((sensorOutput[4] + sensorOutput[5]) < 200)
-      {                   // Straight
+      {                   
+        // Straight
         OCR4A = 32; // Set the duty cycle to 25%
         digitalWrite(LED2_PIN, HIGH); // Turn on LED2
-      } else {            // Turning
+      } else {            
+        // Turning
         OCR4A = 255; // Set the duty cycle to 100%
         digitalWrite(LED2_PIN, LOW); // Turn off LED2
       }
+      // Returning to line following
       if(sensorOutput[8] > obstacleThershold){
         digitalWrite(LED3_PIN, LOW); // 
         count++;
-        if (count > 800) {
-          baseSpeed = initbaseSpeed;
+
+        if (count > 500) { // Delay before returning to line following
+          // Reset values
+          baseSpeed = initbaseSpeed; 
           maxSpeed = initmaxSpeed;
           count = 0;
           state = LINE_FOLLOWING;
-          Serial.println("Exit obstacle state");
+          Serial.println("Exit obstacle state"); // For Debugging
         }
-      } else {
-        count = 0;
+      } else { 
+        count = 0; // Reset count if obstacle is still detected
       }
     }
     break;
     //case (MARKER):
     //break;
     case ERROR:{
-      maxSpeed = 0;
+      maxSpeed = 0; // Stop the robot
       RGB_LED(OFF);
-      OCR4A = 0; // Set the duty cycle to 0%
+      OCR4A = 0; // Light off
       digitalWrite(LED1_PIN, HIGH); // Turn off LED1
-      digitalWrite(LED2_PIN, LOW); // Turn on LED2
+      digitalWrite(LED2_PIN, LOW); // Turn on LED2 - red
+
+      // Returning to line following if one of the sensor detects white
       if((sensorOutput[0] <= errorThreshold) | (sensorOutput[1] <= errorThreshold) | (sensorOutput[2] <= errorThreshold) | (sensorOutput[3] <= errorThreshold) | (sensorOutput[4] <= errorThreshold) | (sensorOutput[5] <= errorThreshold) | (sensorOutput[6] <= errorThreshold) | (sensorOutput[7] <= errorThreshold)){
-      state = LINE_FOLLOWING; // line following
+        maxSpeed = initmaxSpeed; // Reset maxspeed
+        state = LINE_FOLLOWING; // line following
       }
     }
     break;
@@ -253,7 +261,7 @@ void loop() {
       float position = (sensorOutput[0] * -2) + (sensorOutput[1] * -1.5) + (sensorOutput[2] * -0.9) + (sensorOutput[3] * -0.9)+ (sensorOutput[4] * 0.9) + (sensorOutput[5] * 0.9) + (sensorOutput[6] * 1.5) + (sensorOutput[7] * 2);
       //Serial.print(sensorOutput[3]);
       // Serial.println();
-      int controlSignal = (position * 0.1); // Proportional gain of 1.0, adjust as needed
+      int controlSignal = (position * 0.1); // Gain value
     
       // Adjust motor speeds based on control signal
       int leftMotorSpeed = baseSpeed + controlSignal;
@@ -269,10 +277,7 @@ void loop() {
       delay(5);
 
 
-  CS_red = process_red_value();delay(10);
-  CS_green = process_green_value();delay(10);
-  CS_blue = process_blue_value();delay(10);
-  CS_clear = process_clear_value();
+
   
 
   // Serial.print("s1: ");
