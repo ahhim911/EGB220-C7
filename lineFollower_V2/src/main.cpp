@@ -64,6 +64,8 @@ char obstacle;
 int obstacleThershold = 170;
 int markerThershold = 225;
 int errorThreshold = 200;
+int RedThreshold = 700; // Red color threshold on CLEAR value
+int WhiteThreshold = 400; // WHITE color threshold on CLEAR value
 volatile State state = INIT;
 int count = 0;
 
@@ -163,8 +165,13 @@ void loop() {
         digitalWrite(LED2_PIN, LOW); // Turn off LED2
         baseSpeed = initbaseSpeed - 20;
       }
+      // Slow Zone Mode
+      // if (CS_clear < RedThreshold && sensorOutput[9] > markerThershold)
+      // {
+      //   state = SLOWZONE;
+      // }
       
-      
+      // Error Mode
       if((sensorOutput[0] >= errorThreshold) && (sensorOutput[1] >= errorThreshold) && (sensorOutput[2] >= errorThreshold) && (sensorOutput[3] >= errorThreshold) && (sensorOutput[4] >= errorThreshold) && (sensorOutput[5] >= errorThreshold) && (sensorOutput[6] >= errorThreshold) && (sensorOutput[7] >= errorThreshold)){
       // Stops the motors when the robot detects black
       OCR0A = 0;
@@ -179,16 +186,25 @@ void loop() {
     }
     break;
     case SLOWZONE:{
-      digitalWrite(LED1_PIN, LOW); // Turn on LED1
-      digitalWrite(LED2_PIN, HIGH); // Turn off LED2
-      state = LINE_FOLLOWING;
+      RGB_LED(RED);
+      // Exit condition
+      if (CS_clear > WhiteThreshold && CS_clear < 700)
+      {
+        count++;
+      } else {
+        count = 0;
+      }
+      if (count > 2){
+        count = 0;
+        state = LINE_FOLLOWING;
+      }
     }
     break;
     case OBSTACLE: {
       Serial.println("Enter obstacle state");
       digitalWrite(LED3_PIN, HIGH); // 
-      baseSpeed = 65;
-      maxSpeed = 80;
+      baseSpeed = 35;
+      maxSpeed = 60;
       //---------Straight Line behavior---------
       if ((sensorOutput[4] + sensorOutput[5]) < 200)
       {                   // Straight
@@ -201,7 +217,7 @@ void loop() {
       if(sensorOutput[8] > obstacleThershold){
         digitalWrite(LED3_PIN, LOW); // 
         count++;
-        if (count > 800) {
+        if (count > 1000) {
           baseSpeed = initbaseSpeed;
           maxSpeed = initmaxSpeed;
           count = 0;
@@ -269,9 +285,9 @@ void loop() {
       delay(5);
 
 
-  CS_red = process_red_value();delay(10);
-  CS_green = process_green_value();delay(10);
-  CS_blue = process_blue_value();delay(10);
+  // CS_red = process_red_value();delay(10);
+  // CS_green = process_green_value();delay(10);
+  // CS_blue = process_blue_value();delay(10);
   CS_clear = process_clear_value();
   
 
@@ -295,12 +311,12 @@ void loop() {
   Serial.print(sensorOutput[8]);
   Serial.print(", Marker: ");
   Serial.print(sensorOutput[9]);
-  Serial.print(", RED: ");
-  Serial.print(CS_red);
-  Serial.print(", BLUE: ");
-  Serial.print(CS_blue);
-  Serial.print(", GREEN: ");
-  Serial.print(CS_green);
+  // Serial.print(", RED: ");
+  // Serial.print(CS_red);
+  // Serial.print(", BLUE: ");
+  // Serial.print(CS_blue);
+  // Serial.print(", GREEN: ");
+  // Serial.print(CS_green);
   Serial.print(", CLEAR: ");
   Serial.print(CS_clear);
   Serial.println();
