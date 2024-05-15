@@ -4,11 +4,11 @@
 
 // function declarations
 int RGB_LED(int R, int G, int B);
-void colorSensor();
-int process_red_value();
-int process_green_value();
-int process_blue_value();
-int process_clear_value();
+// void colorSensor();
+// int process_red_value();
+// int process_green_value();
+// int process_blue_value();
+// int process_clear_value();
 
 
 // PIN Definitions
@@ -20,7 +20,7 @@ int process_clear_value();
 #define LED4G_PIN 7
 #define LED5_PIN 10
 #define CS_S3_PIN 23
-#define CS_S2_PIN 22
+#define CS_S2_PIN 11
 #define S1_PIN 21
 #define S2_PIN 20
 #define S3_PIN 19
@@ -31,7 +31,7 @@ int process_clear_value();
 #define S8_PIN 14
 #define S9_PIN 13
 #define S10_PIN 12
-#define S11_PIN 11
+#define S11_PIN 22
 #define SW1_PIN 8
 #define SW2_PIN 9
 #define MT1_PIN 5
@@ -71,13 +71,13 @@ int count = 0;
 
 int mode = 0;	// mode 0 is line following mode ; mode 1 is move forward
 
-volatile uint8_t sensorOutput[10]; //ADC sensor value array
+volatile uint8_t sensorOutput[11]; //ADC sensor value array
 
 void getSensorReading()
 {	
 	int sens_num;
   int Value;
-	for (sens_num = 0; sens_num < 10; sens_num++)
+	for (sens_num = 0; sens_num < 11; sens_num++)
 	{
     if (sens_num == 0) Value = analogRead(S1_PIN);
     if (sens_num == 1) Value = analogRead(S2_PIN);
@@ -89,6 +89,7 @@ void getSensorReading()
     if (sens_num == 7) Value = analogRead(S8_PIN);
     if (sens_num == 8) Value = analogRead(S9_PIN); // Obstacle
     if (sens_num == 9) Value = analogRead(S10_PIN); // Marker
+    if (sens_num == 10) Value = analogRead(S11_PIN ); // Color sensor
 
     sensorOutput[sens_num] = Value>>2;
     // sensorOutput[sens_num] = ((Value<<8)/1000);
@@ -105,7 +106,7 @@ void setup() {
   pinMode(LED4G_PIN, OUTPUT); // LED4G
   pinMode(LED5_PIN, OUTPUT); // LED5 Rear light
   pinMode(CS_S3_PIN, OUTPUT); // Color Sensor S3 Ref. Col 
-  pinMode(CS_S2_PIN, OUTPUT); // Color Sensor S2
+  pinMode(CS_S2_PIN, INPUT); // Color Sensor
   pinMode(MT1_PIN, OUTPUT); // Motor 1
   pinMode(MT2_PIN, OUTPUT); // Motor 2
   pinMode(S1_PIN, INPUT); // S1
@@ -288,7 +289,7 @@ void loop() {
   // CS_red = process_red_value();delay(10);
   // CS_green = process_green_value();delay(10);
   // CS_blue = process_blue_value();delay(10);
-  CS_clear = process_clear_value();
+  // CS_clear = process_clear_value();
   
 
   // Serial.print("s1: ");
@@ -317,8 +318,8 @@ void loop() {
   // Serial.print(CS_blue);
   // Serial.print(", GREEN: ");
   // Serial.print(CS_green);
-  Serial.print(", CLEAR: ");
-  Serial.print(CS_clear);
+  Serial.print(", Color: ");
+  Serial.print(sensorOutput[10]);
   Serial.println();
 }
 
@@ -341,31 +342,31 @@ int RGB_LED(int R, int G, int B){
   // L | H | Blue
   // H | L | Clean
   // H | H | Green
-int process_red_value()
-{
-  digitalWrite(CS_S2_PIN, LOW);
-  digitalWrite(CS_S3_PIN, LOW);
-  int pulse_length = pulseIn(S11_PIN, LOW);
-  return pulse_length;
-}
-int process_green_value()
-{
-  digitalWrite(CS_S2_PIN, HIGH);
-  digitalWrite(CS_S3_PIN, HIGH);
-  int pulse_length = pulseIn(S11_PIN, LOW);
-  return pulse_length;
-}
-int process_blue_value()
-{
-  digitalWrite(CS_S2_PIN, LOW);
-  digitalWrite(CS_S3_PIN, HIGH);
-  int pulse_length = pulseIn(S11_PIN, LOW);
-  return pulse_length;
-}
-int process_clear_value()
-{
-  digitalWrite(CS_S2_PIN, HIGH);
-  digitalWrite(CS_S3_PIN, LOW);
-  int pulse_length = pulseIn(S11_PIN, LOW);
-  return pulse_length;
-}
+// int process_red_value()
+// {
+//   digitalWrite(CS_S2_PIN, LOW);
+//   digitalWrite(CS_S3_PIN, LOW);
+//   int pulse_length = pulseIn(S11_PIN, LOW);
+//   return pulse_length;
+// }
+// int process_green_value()
+// {
+//   digitalWrite(CS_S2_PIN, HIGH);
+//   digitalWrite(CS_S3_PIN, HIGH);
+//   int pulse_length = pulseIn(S11_PIN, LOW);
+//   return pulse_length;
+// }
+// int process_blue_value()
+// {
+//   digitalWrite(CS_S2_PIN, LOW);
+//   digitalWrite(CS_S3_PIN, HIGH);
+//   int pulse_length = pulseIn(S11_PIN, LOW);
+//   return pulse_length;
+// }
+// int process_clear_value()
+// {
+//   digitalWrite(CS_S2_PIN, HIGH);
+//   digitalWrite(CS_S3_PIN, LOW);
+//   int pulse_length = pulseIn(S11_PIN, LOW);
+//   return pulse_length;
+// }
