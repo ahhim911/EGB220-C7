@@ -38,9 +38,9 @@ int RGB_LED(int R, int G, int B);
 #define MT2_PIN 4
 
 // RGB LED Color
-#define BLUE LOW, HIGH, HIGH
-#define RED HIGH, LOW, HIGH
-#define GREEN HIGH, HIGH, LOW
+#define RED LOW, HIGH, HIGH
+#define GREEN HIGH, LOW, HIGH
+#define BLUE HIGH, HIGH, LOW
 #define WHITE LOW, LOW, LOW
 #define OFF HIGH, HIGH, HIGH
 
@@ -64,10 +64,15 @@ char obstacle;
 int obstacleThershold = 170;
 int markerThershold = 225;
 int errorThreshold = 200;
-int RedThreshold = 700; // Red color threshold on CLEAR value
-int WhiteThreshold = 400; // WHITE color threshold on CLEAR value
+int RedThreshold = 180; // Red color threshold on CLEAR value green 150
+int WhiteThreshold = 150; // WHITE color threshold on CLEAR value
 volatile State state = INIT;
+int lap = 0;
+int lapCount = 0;
 int count = 0;
+int makerdetected;
+
+uint8_t pb_sample = 0;
 
 int mode = 0;	// mode 0 is line following mode ; mode 1 is move forward
 
@@ -89,7 +94,7 @@ void getSensorReading()
     if (sens_num == 7) Value = analogRead(S8_PIN);
     if (sens_num == 8) Value = analogRead(S9_PIN); // Obstacle
     if (sens_num == 9) Value = analogRead(S10_PIN); // Marker
-    if (sens_num == 10) Value = analogRead(S11_PIN ); // Color sensor
+    if (sens_num == 10) Value = analogRead(S11_PIN); // Color sensor
 
     sensorOutput[sens_num] = Value>>2;
     // sensorOutput[sens_num] = ((Value<<8)/1000);
@@ -148,15 +153,16 @@ void loop() {
   getSensorReading();
   //mode = 0;
   switch (state){
-		case INIT:
+		case INIT: {
       state = LINE_FOLLOWING;
+      }
       break;
 		case LINE_FOLLOWING: {
       digitalWrite(LED1_PIN, LOW); // Turn on LED1
       RGB_LED(WHITE); 
       maxSpeed = initmaxSpeed;
       //---------Straight Line behavior---------
-      if ((sensorOutput[4] + sensorOutput[5]) < 200)
+      if ((sensorOutput[3] + sensorOutput[4]) < 70)
       {                   // Straight
         OCR4A = 32; // Set the duty cycle to 25%
         digitalWrite(LED2_PIN, HIGH); // Turn on LED2
@@ -167,7 +173,7 @@ void loop() {
         baseSpeed = initbaseSpeed - 20;
       }
       // Slow Zone Mode
-      // if (CS_clear < RedThreshold && sensorOutput[9] > markerThershold)
+      // if (sensorOutput[10] < RedThreshold)
       // {
       //   state = SLOWZONE;
       // }
@@ -187,17 +193,65 @@ void loop() {
     }
     break;
     case SLOWZONE:{
+      baseSpeed = 35;
+      maxSpeed = 60;
+      Serial.println("SLOW ZONE MODE");
       RGB_LED(RED);
-      // Exit condition
-      if (CS_clear > WhiteThreshold && CS_clear < 700)
+      if ( lap = 0 ) //left
+      {
+        
+        int pb_state = pb_sample; // Current pushbutton state
+        static uint8_t makerCount = 20;  
+
+        pb_sample = (sensorOutput[10] < WhiteThreshold); // Sample PB state  
+        uint8_t pb_changed = pb_sample ^ pb_state; // Detect change to PB  
+        if (makerdetected = 1)
+        {
+          digitalWrite(LED1_PIN,HIGH);
+        } else if (makerdetected = 2)
+        {
+          digitalWrite(LED2_PIN,HIGH);
+        } else if (makerdetected = 3)
+        {
+          digitalWrite(LED3_PIN,HIGH);
+        }
+        
+        if (pb_changed) {  
+          makerCount--;  
+          if (!makerCount) {  
+            // If PB state stable for 20 ms  
+            pb_state = pb_sample; // Update pushbutton state  
+            makerCount = 20; // Reset makerCounter  
+            makerdetected++;
+        }  
+        } else {  
+          makerCount = 20; // Reset counter  
+        }  
+        // Exit condition
+        if (makerdetected = 3) {
+          lap = 1;
+          lapCount++;
+          makerdetected = 0;
+          state = LINE_FOLLOWING;
+        }
+
+        count++;
+        if (count < 1000)
+        {        
+          sensorOutput[5] = 0;
+          sensorOutput[6] = 0;
+          sensorOutput[7] = 0;
+        }
+      }
+      if (lap = 1) //right
       {
         count++;
-      } else {
-        count = 0;
-      }
-      if (count > 2){
-        count = 0;
-        state = LINE_FOLLOWING;
+        if (count < 1000)
+        {
+          sensorOutput[0] = 0;
+          sensorOutput[1] = 0;
+          sensorOutput[2] = 0;
+        }
       }
     }
     break;
@@ -207,7 +261,7 @@ void loop() {
       baseSpeed = 35;
       maxSpeed = 60;
       //---------Straight Line behavior---------
-      if ((sensorOutput[4] + sensorOutput[5]) < 200)
+      if ((sensorOutput[3] + sensorOutput[4]) < 70)
       {                   // Straight
         OCR4A = 32; // Set the duty cycle to 25%
         digitalWrite(LED2_PIN, HIGH); // Turn on LED2
@@ -312,12 +366,6 @@ void loop() {
   Serial.print(sensorOutput[8]);
   Serial.print(", Marker: ");
   Serial.print(sensorOutput[9]);
-  // Serial.print(", RED: ");
-  // Serial.print(CS_red);
-  // Serial.print(", BLUE: ");
-  // Serial.print(CS_blue);
-  // Serial.print(", GREEN: ");
-  // Serial.print(CS_green);
   Serial.print(", Color: ");
   Serial.print(sensorOutput[10]);
   Serial.println();
