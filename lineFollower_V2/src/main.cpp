@@ -64,8 +64,8 @@ char obstacle;
 int obstacleThershold = 170;
 int markerThershold = 225;
 int errorThreshold = 200;
-int RedThreshold = 180; // Red color threshold on CLEAR value green 150
-int WhiteThreshold = 150; // WHITE color threshold on CLEAR value
+int RedThreshold = 120; // Red color threshold on CLEAR value green 150
+int WhiteThreshold = 70; // WHITE color threshold on CLEAR value
 volatile State state = INIT;
 int lap = 0;
 int lapCount = 0;

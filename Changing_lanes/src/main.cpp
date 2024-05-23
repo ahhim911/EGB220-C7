@@ -4,6 +4,7 @@
 
 // function declarations
 int RGB_LED(int R, int G, int B);
+int colorsensing();
 // void colorSensor();
 // int process_red_value();
 // int process_green_value();
@@ -12,9 +13,9 @@ int RGB_LED(int R, int G, int B);
 
 
 // PIN Definitions
-#define LED1_PIN 0
+#define LED1_PIN 2
 #define LED2_PIN 1
-#define LED3_PIN 2
+#define LED3_PIN 0
 #define LED4B_PIN 3
 #define LED4R_PIN 6
 #define LED4G_PIN 7
@@ -55,7 +56,7 @@ typedef enum{
 } State;
 
 // Gloal variables declarations
-int CS_red, CS_green, CS_blue, CS_clear;
+int colorDetected;
 const int initbaseSpeed = 90; // Base speed for both motors
 const int initmaxSpeed = 130; // Maximum speed
 int baseSpeed = initbaseSpeed; // Base speed for both motors
@@ -66,9 +67,9 @@ int markerThershold = 225;
 int errorThreshold = 200;
 //int RedThreshold = 180; // Red color threshold on CLEAR value green 150
 //int WhiteThreshold = 150; // WHITE color threshold on CLEAR value
-int RedThreshold = 65; // Red color threshold on CLEAR value green 150
-int WhiteThreshold = 40; // WHITE color threshold on CLEAR value
-int GreenThreshold = 90; // WHITE color threshold on CLEAR value
+int RedThreshold = 180; // Red color threshold on CLEAR value green 150
+int WhiteThreshold = 170; // WHITE color threshold on CLEAR value
+int GreenThreshold = 189; // WHITE color threshold on CLEAR value
 volatile State state = INIT;
 int lap = 0;
 int lapCount = 0;
@@ -100,7 +101,7 @@ void getSensorReading()
     if (sens_num == 9) Value = analogRead(S10_PIN); // Marker
     if (sens_num == 10) Value = analogRead(S11_PIN); // Color sensor
 
-    sensorOutput[sens_num] = Value>>2;
+    sensorOutput[sens_num] = Value>>2; // 10 bit ADC to 8 bit
     // sensorOutput[sens_num] = ((Value<<8)/1000);
   }
 }
@@ -165,36 +166,20 @@ void loop() {
       digitalWrite(LED1_PIN, LOW); // Turn on LED1
       RGB_LED(WHITE); 
       maxSpeed = initmaxSpeed;
-      //---------Straight Line behavior---------
-      if ((sensorOutput[3] + sensorOutput[4]) < 70)
-      {                   // Straight
-        OCR4A = 32; // Set the duty cycle to 25%
-        digitalWrite(LED2_PIN, HIGH); // Turn on LED2
-        baseSpeed = initbaseSpeed;
-      } else {            // Turning
-        OCR4A = 255; // Set the duty cycle to 100%
-        digitalWrite(LED2_PIN, LOW); // Turn off LED2
-        baseSpeed = initbaseSpeed - 20;
-      }
       // Slow Zone Mode
-      if ((sensorOutput[10] > 175) && (sensorOutput[10] < 180))
+      if (sensorOutput[10] < GreenThreshold)
       {
-        Serial.print(sensorOutput[10]);
-        state = SLOWZONE;
-      }
-      // Error Mode
-      if((sensorOutput[0] >= errorThreshold) && (sensorOutput[1] >= errorThreshold) && (sensorOutput[2] >= errorThreshold) && (sensorOutput[3] >= errorThreshold) && (sensorOutput[4] >= errorThreshold) && (sensorOutput[5] >= errorThreshold) && (sensorOutput[6] >= errorThreshold) && (sensorOutput[7] >= errorThreshold)){
-      // Stops the motors when the robot detects black
-      OCR0A = 0;
-      OCR0B = 0;
-      state = ERROR; // error mode
+        colorsensing();
+        if ((colorDetected < RedThreshold) && (colorDetected > WhiteThreshold)){
+          state = SLOWZONE;
+        }
       }
       // Stopping Zone Mode
-      if (sensorOutput[10] < RedThreshold){
-        // Needs a delay
-        stoppingMarker = ~stoppingMarker;
-        state = MARKER;
-      }
+      // if (sensorOutput[10] < RedThreshold){
+      //   // Needs a delay
+      //   stoppingMarker = ~stoppingMarker;
+      //   state = MARKER;
+      // }
       if(sensorOutput[8] < obstacleThershold){
         obstacle = 'Y';
         state = OBSTACLE; // obstacle mode
@@ -205,7 +190,7 @@ void loop() {
     case SLOWZONE:{
       baseSpeed = 45;
       maxSpeed = 70;
-      Serial.println("SLOW ZONE MODE");
+      // Serial.println("SLOW ZONE MODE");
       RGB_LED(RED);
       if ( lap == 0 ) //left
       {
@@ -290,15 +275,6 @@ void loop() {
       digitalWrite(LED3_PIN, HIGH); //Blue LED
       baseSpeed = 35;
       maxSpeed = 60;
-      //---------Straight Line behavior---------
-      if ((sensorOutput[3] + sensorOutput[4]) < 70)
-      {                   // Straight
-        OCR4A = 32; // Set the duty cycle to 25%
-        digitalWrite(LED2_PIN, HIGH); // Turn on LED2
-      } else {            // Turning
-        OCR4A = 255; // Set the duty cycle to 100%
-        digitalWrite(LED2_PIN, LOW); // Turn off LED2
-      }
       if(sensorOutput[8] > obstacleThershold){
         digitalWrite(LED3_PIN, LOW); // 
         count++;
@@ -344,6 +320,26 @@ void loop() {
 		default:
 			state = INIT;
 	}
+  
+  //---------Straight Line behavior---------
+  if ((sensorOutput[3] + sensorOutput[4]) < 70)
+  {                   // Straight
+    OCR4A = 32; // Set the duty cycle to 25%
+    digitalWrite(LED2_PIN, HIGH); // Turn on LED2
+    baseSpeed = initbaseSpeed;
+  } else {            // Turning
+    OCR4A = 255; // Set the duty cycle to 100%
+    digitalWrite(LED2_PIN, LOW); // Turn off LED2
+    baseSpeed = initbaseSpeed - 20;
+  }
+  
+  // Error Mode
+  if((sensorOutput[0] >= errorThreshold) && (sensorOutput[1] >= errorThreshold) && (sensorOutput[2] >= errorThreshold) && (sensorOutput[3] >= errorThreshold) && (sensorOutput[4] >= errorThreshold) && (sensorOutput[5] >= errorThreshold) && (sensorOutput[6] >= errorThreshold) && (sensorOutput[7] >= errorThreshold)){
+  // Stops the motors when the robot detects black
+  OCR0A = 0;
+  OCR0B = 0;
+  state = ERROR; // error mode
+  }
   //---------Check button state---------
 
   // int SW1 = digitalRead(SW1_PIN);
@@ -406,13 +402,13 @@ void loop() {
   // Serial.print(sensorOutput[6]);
   // Serial.print(", s8: ");
   // Serial.print(sensorOutput[7]);
-  Serial.print(", Obstacle: ");
-  Serial.print(sensorOutput[8]);
-  Serial.print(", Marker: ");
-  Serial.print(sensorOutput[9]);
-  Serial.print(", Color: ");
-  Serial.print(sensorOutput[10]);
-  Serial.println();
+  // Serial.print(", Obstacle: ");
+  // Serial.print(sensorOutput[8]);
+  // Serial.print(", Marker: ");
+  // Serial.print(sensorOutput[9]);
+  // Serial.print(", Color: ");
+  // Serial.print(sensorOutput[10]);
+  // Serial.println();
 }
 
 // put function definitions here:
@@ -428,37 +424,22 @@ int RGB_LED(int R, int G, int B){
   // - OFF 
 }
 
-// Color sensor readings
-  //S2 | S3 | Output 
-  // L | L | Red
-  // L | H | Blue
-  // H | L | Clean
-  // H | H | Green
-// int process_red_value()
-// {
-//   digitalWrite(CS_S2_PIN, LOW);
-//   digitalWrite(CS_S3_PIN, LOW);
-//   int pulse_length = pulseIn(S11_PIN, LOW);
-//   return pulse_length;
-// }
-// int process_green_value()
-// {
-//   digitalWrite(CS_S2_PIN, HIGH);
-//   digitalWrite(CS_S3_PIN, HIGH);
-//   int pulse_length = pulseIn(S11_PIN, LOW);
-//   return pulse_length;
-// }
-// int process_blue_value()
-// {
-//   digitalWrite(CS_S2_PIN, LOW);
-//   digitalWrite(CS_S3_PIN, HIGH);
-//   int pulse_length = pulseIn(S11_PIN, LOW);
-//   return pulse_length;
-// }
-// int process_clear_value()
-// {
-//   digitalWrite(CS_S2_PIN, HIGH);
-//   digitalWrite(CS_S3_PIN, LOW);
-//   int pulse_length = pulseIn(S11_PIN, LOW);
-//   return pulse_length;
-// }
+int colorsensing(){
+  // Color sensor
+  colorDetected = 200; // Initialize the minimum value
+  int sampleLast = 200; // Number of samples to take
+  int sampleCount = 1000; // Number of samples to take
+  for (int i = 0; i < sampleCount; i++)
+  {
+    int sample = sensorOutput[10]; // Read the sensor value
+    if (sampleLast > sample) // Find the minimum value
+    {
+      sampleLast = sample;
+    }
+    delay(1);
+  }
+  Serial.print("Color Detected: ");
+  colorDetected = sampleLast;
+  Serial.println(colorDetected);
+  return colorDetected;
+}
