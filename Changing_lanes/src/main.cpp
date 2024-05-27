@@ -68,8 +68,8 @@ int errorThreshold = 200;
 //int RedThreshold = 180; // Red color threshold on CLEAR value green 150
 //int WhiteThreshold = 150; // WHITE color threshold on CLEAR value
 int RedThreshold = 180; // Red color threshold on CLEAR value green 150
-int WhiteThreshold = 170; // WHITE color threshold on CLEAR value
-int GreenThreshold = 189; // WHITE color threshold on CLEAR value
+int WhiteThreshold = 50; // WHITE color threshold on CLEAR value
+int GreenThreshold = 200; // WHITE color threshold on CLEAR value
 volatile State state = INIT;
 int lap = 0;
 int lapCount = 0;
@@ -402,13 +402,13 @@ void loop() {
   // Serial.print(sensorOutput[6]);
   // Serial.print(", s8: ");
   // Serial.print(sensorOutput[7]);
-  // Serial.print(", Obstacle: ");
-  // Serial.print(sensorOutput[8]);
-  // Serial.print(", Marker: ");
-  // Serial.print(sensorOutput[9]);
-  // Serial.print(", Color: ");
-  // Serial.print(sensorOutput[10]);
-  // Serial.println();
+  Serial.print(", Obstacle: ");
+  Serial.print(sensorOutput[8]);
+  Serial.print(", Marker: ");
+  Serial.print(sensorOutput[9]);
+  Serial.print(", Color: ");
+  Serial.print(sensorOutput[10]);
+  Serial.println();
 }
 
 // put function definitions here:
