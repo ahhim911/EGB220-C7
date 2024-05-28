@@ -5,6 +5,7 @@
 // function declarations
 int RGB_LED(int R, int G, int B);
 int colorsensing();
+int colorsensing2();
 // void colorSensor();
 // int process_red_value();
 // int process_green_value();
@@ -57,6 +58,7 @@ typedef enum{
 
 // Gloal variables declarations
 int colorDetected;
+int colorDetected_2;
 const int initbaseSpeed = 90; // Base speed for both motors
 const int initmaxSpeed = 130; // Maximum speed
 int baseSpeed = initbaseSpeed; // Base speed for both motors
@@ -67,15 +69,16 @@ int markerThershold = 225;
 int errorThreshold = 200;
 //int RedThreshold = 180; // Red color threshold on CLEAR value green 150
 //int WhiteThreshold = 150; // WHITE color threshold on CLEAR value
-int RedThreshold = 180; // Red color threshold on CLEAR value green 150
-int WhiteThreshold = 50; // WHITE color threshold on CLEAR value
-int GreenThreshold = 200; // WHITE color threshold on CLEAR value
+int RedThreshold = 230; // Red color threshold on CLEAR value green 150
+int WhiteThreshold = 197; // WHITE color threshold on CLEAR value
+int GreenThreshold = 230; // Green color threshold on CLEAR value
 volatile State state = INIT;
 int lap = 0;
 int lapCount = 0;
 int count = 0;
 int makerdetected;
 int stoppingMarker = 0;
+int stopzoneflag = 0;
 
 uint8_t pb_sample = 0;
 
@@ -167,19 +170,22 @@ void loop() {
       RGB_LED(WHITE); 
       maxSpeed = initmaxSpeed;
       // Slow Zone Mode
-      if (sensorOutput[10] < GreenThreshold)
+      if ((sensorOutput[10] < GreenThreshold) && (sensorOutput[9] > 220) && (stopzoneflag > 0))
       {
         colorsensing();
-        if ((colorDetected < RedThreshold) && (colorDetected > WhiteThreshold)){
+        //stopzoneflag++;
+        if ((colorDetected < RedThreshold) && (colorDetected > WhiteThreshold) && (sensorOutput[9] > 220)){
           state = SLOWZONE;
         }
       }
       // Stopping Zone Mode
-      // if (sensorOutput[10] < RedThreshold){
-      //   // Needs a delay
-      //   stoppingMarker = ~stoppingMarker;
-      //   state = MARKER;
-      // }
+      if ((sensorOutput[10] < GreenThreshold) && (stopzoneflag == 0) && (sensorOutput[9] > 220)){
+        colorsensing();
+        if ((colorDetected_2 < WhiteThreshold)){
+          stoppingMarker = ~stoppingMarker;
+          state = MARKER;
+        }
+      }
       if(sensorOutput[8] < obstacleThershold){
         obstacle = 'Y';
         state = OBSTACLE; // obstacle mode
@@ -201,30 +207,43 @@ void loop() {
         //   makerdetected = 0;
         //   state = LINE_FOLLOWING;
         // }
-        static uint16_t makerCount = 500;
-        if (sensorOutput[10] < RedThreshold) {  
-          makerCount--;  
-          if (makerCount == 0) {
-            makerCount = 500; // Reset makerCounter  
-            makerdetected++;
-          }  
-        } 
-        //else {  
-        //  makerCount = 5; // Reset counter  
-        //}  
-        // Exit condition
-        if (makerdetected == 3) {
-          lap = 1;
-          lapCount++;
-          makerdetected = 0;
-          state = LINE_FOLLOWING;
+        //static uint16_t makerCount = 500;
+        if (count > 1000){
+          if (sensorOutput[10] < GreenThreshold)
+          {
+            colorsensing();
+            if ((colorDetected > 220) && (colorDetected < 250)){
+              lap = 1;
+              lapCount++;
+              makerdetected = 0;
+              stopzoneflag--;
+              state = LINE_FOLLOWING;
+            }
+          }
         }
+        // if (sensorOutput[10] < RedThreshold) {  
+        //   makerCount--;  
+        //   if (makerCount == 0) {
+        //     makerCount = 500; // Reset makerCounter  
+        //     makerdetected++;
+        //   }  
+        // } 
+        // //else {  
+        // //  makerCount = 5; // Reset counter  
+        // //}  
+        // // Exit condition
+        // if (makerdetected == 3) {
+        //   lap = 1;
+        //   lapCount++;
+        //   makerdetected = 0;
+        //   state = LINE_FOLLOWING;
+        // }
         count++;
         if (count < 1000)
         {        
-          //sensorOutput[5] = 0;
-          //sensorOutput[6] = 0;
-          //sensorOutput[7] = 0;
+          //sensorOutput[2] = 250;
+          sensorOutput[0] = 250;
+          sensorOutput[1] = 250;
         }
         if(sensorOutput[8] < obstacleThershold){
           obstacle = 'Y';
@@ -241,26 +260,39 @@ void loop() {
         //   makerdetected = 0;
         //   state = LINE_FOLLOWING;
         // }
-        static uint16_t makerCount = 1000;
-        if (sensorOutput[10] < RedThreshold) {  
-          makerCount--;  
-          if (makerCount == 0) {
-            makerCount = 1000; // Reset makerCounter  
-            makerdetected++;
-          }  
+        if (count > 1000){
+          if (sensorOutput[10] < GreenThreshold)
+          {
+            colorsensing();
+            if ((colorDetected > 220) && (colorDetected < 250)){
+              lap = 1;
+              lapCount++;
+              makerdetected = 0;
+              stopzoneflag--;
+              state = LINE_FOLLOWING;
+            }
+          }
         }
-        if (makerdetected == 1) {
-          lap = 1;
-          lapCount++;
-          makerdetected = 0;
-          state = LINE_FOLLOWING;
-        }
+        // static uint16_t makerCount = 1000;
+        // if (sensorOutput[10] < RedThreshold) {  
+        //   makerCount--;  
+        //   if (makerCount == 0) {
+        //     makerCount = 1000; // Reset makerCounter  
+        //     makerdetected++;
+        //   }  
+        // }
+        // if (makerdetected == 1) {
+        //   lap = 1;
+        //   lapCount++;
+        //   makerdetected = 0;
+        //   state = LINE_FOLLOWING;
+        // }
         count++;
         if (count < 1000)
         {
-          sensorOutput[0] = 0;
-          sensorOutput[1] = 0;
-          sensorOutput[2] = 0;
+          //sensorOutput[5] = 250;
+          sensorOutput[6] = 250;
+          sensorOutput[7] = 250;
         }
         if(sensorOutput[8] < obstacleThershold){
           obstacle = 'Y';
@@ -273,8 +305,8 @@ void loop() {
     case OBSTACLE: {
       Serial.println("Enter obstacle state");
       digitalWrite(LED3_PIN, HIGH); //Blue LED
-      baseSpeed = 35;
-      maxSpeed = 60;
+      baseSpeed = 25;
+      maxSpeed = 45;
       if(sensorOutput[8] > obstacleThershold){
         digitalWrite(LED3_PIN, LOW); // 
         count++;
@@ -292,16 +324,19 @@ void loop() {
     break;
     case MARKER:{ 
       // Stop zone
+      delay(10);
       if (stoppingMarker == 0){
-        delay(100); // Need to instead make it slow to a stop
+        // Need to instead make it slow to a stop
         // Turn on RED led
         digitalWrite(LED2_PIN,HIGH);
         OCR0A = 0;
         OCR0B = 0;
-        delay(500);
+        delay(1000);
+        stopzoneflag = 2;
         state = LINE_FOLLOWING;
       }
       else {
+        stopzoneflag = 2;
         state = LINE_FOLLOWING;
       }
     }
@@ -426,9 +461,9 @@ int RGB_LED(int R, int G, int B){
 
 int colorsensing(){
   // Color sensor
-  colorDetected = 200; // Initialize the minimum value
-  int sampleLast = 200; // Number of samples to take
-  int sampleCount = 1000; // Number of samples to take
+  colorDetected = 240; // Initialize the minimum value
+  int sampleLast = 240; // Number of samples to take
+  int sampleCount = 1100; // Number of samples to take
   for (int i = 0; i < sampleCount; i++)
   {
     int sample = sensorOutput[10]; // Read the sensor value
@@ -442,4 +477,29 @@ int colorsensing(){
   colorDetected = sampleLast;
   Serial.println(colorDetected);
   return colorDetected;
+}
+int colorsensing2(){
+  // Color sensor
+  colorDetected_2 = 240; // Initialize the minimum value
+  int sampleLast = 240; // Number of samples to take
+  int sampleCount = 1100; // Number of samples to take
+  for (int i = 0; i < sampleCount; i++)
+  {
+    int sample = sensorOutput[10]; // Read the sensor value
+    if (sampleLast > sample) // Find the minimum value
+    {
+      sampleLast = sample;
+    }
+    if (sensorOutput[9] < 100){
+      sampleLast = 0;
+    }
+    delay(1);
+  }
+  Serial.print("Color Detected: ");
+  colorDetected_2 = sampleLast;
+  if (colorDetected_2 == 0){
+    colorDetected_2 = 255;
+  }
+  Serial.println(colorDetected_2);
+  return colorDetected_2;
 }
