@@ -181,7 +181,7 @@ void loop() {
       // Stopping Zone Mode
       if ((sensorOutput[10] < GreenThreshold) && (stopzoneflag == 0) && (sensorOutput[9] > 220)){
         colorsensing();
-        if ((colorDetected_2 < WhiteThreshold)){
+        if ((colorDetected < WhiteThreshold)){
           stoppingMarker = ~stoppingMarker;
           state = MARKER;
         }
@@ -200,14 +200,6 @@ void loop() {
       RGB_LED(RED);
       if ( lap == 0 ) //left
       {
-        // Should be able to change to GREEN now
-        // if ((sensorOutput[10] > GreenThreshold) && (sensorOutput[10] < 100))  {
-        //   lap = 1;
-        //   lapCount++;
-        //   makerdetected = 0;
-        //   state = LINE_FOLLOWING;
-        // }
-        //static uint16_t makerCount = 500;
         if (count > 1000){
           if (sensorOutput[10] < GreenThreshold)
           {
@@ -221,23 +213,6 @@ void loop() {
             }
           }
         }
-        // if (sensorOutput[10] < RedThreshold) {  
-        //   makerCount--;  
-        //   if (makerCount == 0) {
-        //     makerCount = 500; // Reset makerCounter  
-        //     makerdetected++;
-        //   }  
-        // } 
-        // //else {  
-        // //  makerCount = 5; // Reset counter  
-        // //}  
-        // // Exit condition
-        // if (makerdetected == 3) {
-        //   lap = 1;
-        //   lapCount++;
-        //   makerdetected = 0;
-        //   state = LINE_FOLLOWING;
-        // }
         if (count < 1000)
         {        
           //sensorOutput[2] = 250;
@@ -328,6 +303,7 @@ void loop() {
       count = 0;
       stoppingMarker = 0;
       stopzoneflag = 0;
+      delay(1000);
       state = LINE_FOLLOWING; // line following
       }
     }
@@ -355,25 +331,6 @@ void loop() {
   OCR0B = 0;
   state = ERROR; // error mode
   }
-  //---------Check button state---------
-
-  // int SW1 = digitalRead(SW1_PIN);
-  // int SW2 = digitalRead(SW2_PIN);
-  // if (SW1 == 1)
-  // {
-  //  //RGB_LED(RED);
-  //  OCR4A = 0; // Set the duty cycle to 0%
-  // }
-  // else if (SW2 == 1)
-  // {
-  //  //RGB_LED(GREEN);
-  //  OCR4A = 255; // Set the duty cycle to 100%
-  // }
-  // else
-  // {
-  //  //RGB_LED(WHITE);
-  //  OCR4A = 64; // Set the duty cycle to 25%
-  // }
 
       //---------P Control---------
       float position = (sensorOutput[0] * -2) + (sensorOutput[1] * -1.5) + (sensorOutput[2] * -0.9) + (sensorOutput[3] * -0.9)+ (sensorOutput[4] * 0.9) + (sensorOutput[5] * 0.9) + (sensorOutput[6] * 1.5) + (sensorOutput[7] * 2);
@@ -393,13 +350,6 @@ void loop() {
       OCR0B = rightMotorSpeed; //right motor
       
       delay(5);
-
-
-  // CS_red = process_red_value();delay(10);
-  // CS_green = process_green_value();delay(10);
-  // CS_blue = process_blue_value();delay(10);
-  // CS_clear = process_clear_value();
-  
 
   // Serial.print("s1: ");
   // Serial.print(sensorOutput[0]);
@@ -431,12 +381,6 @@ int RGB_LED(int R, int G, int B){
   digitalWrite(LED4R_PIN, R);
   digitalWrite(LED4G_PIN, G);
   digitalWrite(LED4B_PIN, B);
-  // Options
-  // - BLUE - OBSTACLE
-  // - RED - STOP
-  // - GREEN - STRAIGHT
-  // - WHITE 
-  // - OFF 
 }
 
 
@@ -467,7 +411,7 @@ int colorsensing(){
     delay(1);
   }
   Serial.print("Color Detected: ");
-  if (sampleLastS1 < 150 && sampleLastS8 < 150) // if White detected on S1 and S8
+  if ((sampleLastS1 < 150) && (sampleLastS8 < 150)) // if White detected on S1 and S8
   {
     colorDetected = 255;
     Serial.println("Crossline deteted");
