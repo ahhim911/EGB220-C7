@@ -65,12 +65,12 @@ int baseSpeed = initbaseSpeed; // Base speed for both motors
 int maxSpeed = initmaxSpeed; // Maximum speed
 char obstacle;
 int obstacleThershold = 170;
-int markerThershold = 225;
+int markerThershold = 235;
 int errorThreshold = 200;
 //int RedThreshold = 180; // Red color threshold on CLEAR value green 150
 //int WhiteThreshold = 150; // WHITE color threshold on CLEAR value
 int RedThreshold = 230; // Red color threshold on CLEAR value green 150
-int WhiteThreshold = 197; // WHITE color threshold on CLEAR value
+int WhiteThreshold = 210; // WHITE color threshold on CLEAR value
 int GreenThreshold = 230; // Green color threshold on CLEAR value
 volatile State state = INIT;
 int lap = 0;
@@ -170,11 +170,11 @@ void loop() {
       RGB_LED(WHITE); 
       maxSpeed = initmaxSpeed;
       // Slow Zone Mode
-      if ((sensorOutput[10] < GreenThreshold) && (sensorOutput[9] > 220) && (stopzoneflag > 0))
+      if ((sensorOutput[10] < GreenThreshold) && (stopzoneflag == 1))
       {
         colorsensing();
         //stopzoneflag++;
-        if ((colorDetected < RedThreshold) && (colorDetected > WhiteThreshold) && (sensorOutput[9] > 220)){
+        if ((colorDetected < RedThreshold) && (colorDetected > WhiteThreshold)){
           state = SLOWZONE;
         }
       }
@@ -216,7 +216,7 @@ void loop() {
               lap = 1;
               lapCount++;
               makerdetected = 0;
-              stopzoneflag--;
+              stopzoneflag = 0;
               state = LINE_FOLLOWING;
             }
           }
@@ -238,7 +238,6 @@ void loop() {
         //   makerdetected = 0;
         //   state = LINE_FOLLOWING;
         // }
-        count++;
         if (count < 1000)
         {        
           //sensorOutput[2] = 250;
@@ -254,12 +253,6 @@ void loop() {
       if (lap == 1) //right
       {
         // Should be able to change to GREEN now
-        // if ((sensorOutput[10] > GreenThreshold) && (sensorOutput[10] < 100))  {
-        //   lap = 0;
-        //   lapCount++;
-        //   makerdetected = 0;
-        //   state = LINE_FOLLOWING;
-        // }
         if (count > 1000){
           if (sensorOutput[10] < GreenThreshold)
           {
@@ -268,26 +261,11 @@ void loop() {
               lap = 1;
               lapCount++;
               makerdetected = 0;
-              stopzoneflag--;
+              stopzoneflag = 0;
               state = LINE_FOLLOWING;
             }
           }
         }
-        // static uint16_t makerCount = 1000;
-        // if (sensorOutput[10] < RedThreshold) {  
-        //   makerCount--;  
-        //   if (makerCount == 0) {
-        //     makerCount = 1000; // Reset makerCounter  
-        //     makerdetected++;
-        //   }  
-        // }
-        // if (makerdetected == 1) {
-        //   lap = 1;
-        //   lapCount++;
-        //   makerdetected = 0;
-        //   state = LINE_FOLLOWING;
-        // }
-        count++;
         if (count < 1000)
         {
           //sensorOutput[5] = 250;
@@ -300,6 +278,7 @@ void loop() {
           Serial.println("Obstacle Detected");
         }
       }
+        count++;
     }
     break;
     case OBSTACLE: {
@@ -324,7 +303,7 @@ void loop() {
     break;
     case MARKER:{ 
       // Stop zone
-      delay(10);
+      delay(100);
       if (stoppingMarker == 0){
         // Need to instead make it slow to a stop
         // Turn on RED led
@@ -332,13 +311,9 @@ void loop() {
         OCR0A = 0;
         OCR0B = 0;
         delay(1000);
-        stopzoneflag = 2;
-        state = LINE_FOLLOWING;
       }
-      else {
-        stopzoneflag = 2;
-        state = LINE_FOLLOWING;
-      }
+      stopzoneflag = 1;
+      state = LINE_FOLLOWING;
     }
     break;
     case ERROR:{
@@ -348,6 +323,11 @@ void loop() {
       digitalWrite(LED1_PIN, HIGH); // Turn off LED1
       digitalWrite(LED2_PIN, LOW); // Turn on LED2
       if((sensorOutput[0] <= errorThreshold) | (sensorOutput[1] <= errorThreshold) | (sensorOutput[2] <= errorThreshold) | (sensorOutput[3] <= errorThreshold) | (sensorOutput[4] <= errorThreshold) | (sensorOutput[5] <= errorThreshold) | (sensorOutput[6] <= errorThreshold) | (sensorOutput[7] <= errorThreshold)){
+      lap = 0;
+      lapCount = 0;
+      count = 0;
+      stoppingMarker = 0;
+      stopzoneflag = 0;
       state = LINE_FOLLOWING; // line following
       }
     }
@@ -459,47 +439,41 @@ int RGB_LED(int R, int G, int B){
   // - OFF 
 }
 
+
 int colorsensing(){
   // Color sensor
   colorDetected = 240; // Initialize the minimum value
-  int sampleLast = 240; // Number of samples to take
+  int sampleLastRight = 240; 
+  int sampleLastS1 = 240;
+  int sampleLastS8 = 240;
   int sampleCount = 1100; // Number of samples to take
   for (int i = 0; i < sampleCount; i++)
   {
-    int sample = sensorOutput[10]; // Read the sensor value
-    if (sampleLast > sample) // Find the minimum value
+    int sampleRight = sensorOutput[10]; // Read the sensor value
+    int sampleS1 = sensorOutput[0]; // Read the sensor value
+    int sampleS8 = sensorOutput[7]; // Read the sensor value
+    if (sampleLastRight > sampleRight) // Find the minimum value
     {
-      sampleLast = sample;
+      sampleLastRight = sampleRight;
+    }
+    if (sampleLastS1 > sampleS1) // Find the minimum value of S1
+    {
+      sampleLastS1 = sampleS1;
+    }
+    if (sampleLastS8 > sampleS8) // Find the minimum value of S8
+    {
+      sampleLastS8 = sampleS8;
     }
     delay(1);
   }
   Serial.print("Color Detected: ");
-  colorDetected = sampleLast;
-  Serial.println(colorDetected);
+  if (sampleLastS1 < 150 && sampleLastS8 < 150) // if White detected on S1 and S8
+  {
+    colorDetected = 255;
+    Serial.println("Crossline deteted");
+  } else {
+    colorDetected = sampleLastRight;
+    Serial.println(colorDetected);
+  }
   return colorDetected;
-}
-int colorsensing2(){
-  // Color sensor
-  colorDetected_2 = 240; // Initialize the minimum value
-  int sampleLast = 240; // Number of samples to take
-  int sampleCount = 1100; // Number of samples to take
-  for (int i = 0; i < sampleCount; i++)
-  {
-    int sample = sensorOutput[10]; // Read the sensor value
-    if (sampleLast > sample) // Find the minimum value
-    {
-      sampleLast = sample;
-    }
-    if (sensorOutput[9] < 100){
-      sampleLast = 0;
-    }
-    delay(1);
-  }
-  Serial.print("Color Detected: ");
-  colorDetected_2 = sampleLast;
-  if (colorDetected_2 == 0){
-    colorDetected_2 = 255;
-  }
-  Serial.println(colorDetected_2);
-  return colorDetected_2;
 }
